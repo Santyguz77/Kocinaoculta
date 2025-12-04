@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="theme-color" content="#000000">
+	<link rel="manifest" href="/manifest.json">
+	<link rel="icon" type="image/png" href="/image.png">
+	<link rel="apple-touch-icon" href="/image.png">
+	<link rel="stylesheet" href="styles.css">
+	<title>Meseros - Kocina Oculta</title>
+	<style>
+		.meseros-layout {
+			max-width: 1400px;
+			margin: 0 auto;
+		}
+		.order-items {
+			margin-top: 20px;
+		}
+		.order-item {
+			background: rgba(0, 0, 0, 0.3);
+			padding: 15px;
+			border-radius: 8px;
+			margin-bottom: 10px;
+			border-left: 3px solid var(--accent);
+		}
+		.order-item-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 10px;
+		}
+		.order-item-name {
+			font-size: 16px;
+			font-weight: 600;
+			color: var(--accent);
+		}
+		.order-item-quantity {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+		.quantity-btn {
+			width: 30px;
+			height: 30px;
+			border-radius: 50%;
+			border: 0;
+			background: #ffffff;
+			color: #000000;
+			font-size: 18px;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+		.quantity-display {
+			font-size: 18px;
+			font-weight: 700;
+			min-width: 30px;
+			text-align: center;
+		}
+		.order-item-notes {
+			margin-top: 10px;
+		}
+		.order-item-notes textarea {
+			width: 100%;
+			min-height: 60px;
+			resize: vertical;
+		}
+		.order-summary {
+			background: linear-gradient(135deg, var(--panel), var(--card));
+			padding: 20px;
+			border-radius: 12px;
+			margin-top: 20px;
+			border: 2px solid var(--accent);
+		}
+		.order-total {
+			font-size: 24px;
+			font-weight: 700;
+			color: var(--success);
+			text-align: right;
+			margin-top: 10px;
+		}
+		.category-filter {
+			display: flex;
+			gap: 10px;
+			margin-bottom: 20px;
+			flex-wrap: wrap;
+		}
+		.category-btn {
+			padding: 8px 16px;
+			border-radius: 20px;
+			border: 2px solid var(--accent);
+			background: transparent;
+			color: var(--accent);
+			cursor: pointer;
+			transition: all 0.3s;
+		}
+		.category-btn.active {
+			background: #ffffff;
+			color: #000000;
+		}
+		.back-button {
+			margin-bottom: 20px;
+		}
+	</style>
+</head>
+<body>
+	<script>
+		// Verificar sesión de mesero
+		const session = localStorage.getItem('userSession');
+		if (!session) {
+			window.location.href = '/login.html';
+		} else {
+			const userData = JSON.parse(session);
+			if (userData.type !== 'waiter') {
+				alert('⚠️ Acceso denegado. Esta página es solo para meseros.');
+				window.location.href = '/login.html';
+			}
+		}
+	</script>
+	<div class="app">
+		<div class="main meseros-layout">
+			<!-- Vista de selección de mesa -->
+			<div id="table-selection-view">
+				<div class="header">
+					<div style="display: flex; align-items: center; gap: 15px;">
+						<img src="image.png" alt="Logo" style="width: 50px; height: 50px; border-radius: 50%;">
+						<h1>Selecciona una Mesa</h1>
+					</div>
+					<button class="btn btn-danger" onclick="logout()" style="background: #ffffff; color: #000000;">🚺 Cerrar</button>
+				</div>
+				<div class="tables-grid" id="tables-grid"></div>
+			</div>
+
+			<!-- Vista de pedido -->
+			<div id="order-view" class="hidden">
+				<div class="back-button">
+					<button class="btn btn-secondary" onclick="backToTables()">← Volver a Mesas</button>
+				</div>
+				
+				<div class="header">
+					<h1>Mesa <span id="current-table-number"></span></h1>
+					<div class="controls">
+						<button class="btn btn-success" onclick="saveOrder()">💾 Guardar Pedido</button>
+						<button class="btn btn-danger" onclick="clearOrder()">🗑️ Limpiar</button>
+						<button class="btn" onclick="logout()" style="background: #ffffff; color: #000000;">🚺</button>
+					</div>
+				</div>
+
+				<div class="card">
+					<h3>Menú</h3>
+					<div class="category-filter" id="category-filter"></div>
+					<div class="menu-grid" id="menu-grid"></div>
+				</div>
+
+				<div class="order-summary">
+					<h3>Pedido Actual</h3>
+					<div class="order-items" id="order-items">
+						<p class="text-center" style="color: var(--muted);">No hay productos en el pedido</p>
+					</div>
+					<div class="order-total" id="order-total">Total: $0.00</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script src="app.js"></script>
+	<script>
+		let currentTable = null;
+		let currentOrder = {
+			items: []
+		};
+		let selectedCategory = 'all';
+
+		// Inicializar
+		async function init() {
+			await loadInitialData();
+			await initializeDefaultData();
+			renderTables();
+		}
+
+		// Renderizar mesas
+		function renderTables() {
+			const container = document.getElementById('tables-grid');
+			container.innerHTML = AppState.tables.map(table => `
+				<div class="table-card ${table.status}" onclick="selectTable('${table.id}')">
+					<div class="table-number">Mesa ${table.number}</div>
+					<div class="table-status">
+						${table.status === 'available' ? '✅ Disponible' : 
+						  table.status === 'occupied' ? '🔴 Ocupada' : '📝 Reservada'}
+					</div>
+					${table.currentOrder ? `<div class="badge badge-info" style="margin-top: 10px;">Con pedido</div>` : ''}
+				</div>
+			`).join('');
+		}
+
+		// Seleccionar mesa
+		function selectTable(tableId) {
+			currentTable = AppState.tables.find(t => t.id === tableId);
+			if (!currentTable) return;
+
+			// Cargar pedido existente si lo hay
+			if (currentTable.currentOrder) {
+				const existingOrder = AppState.orders.find(o => o.id === currentTable.currentOrder);
+				if (existingOrder) {
+					currentOrder = JSON.parse(JSON.stringify(existingOrder));
+				} else {
+					currentOrder = { items: [] };
+				}
+			} else {
+				currentOrder = { items: [] };
+			}
+
+			document.getElementById('current-table-number').textContent = currentTable.number;
+			document.getElementById('table-selection-view').classList.add('hidden');
+			document.getElementById('order-view').classList.remove('hidden');
+			
+			renderCategories();
+			renderMenu();
+			renderOrderItems();
+		}
+
+		// Volver a mesas
+		function backToTables() {
+			document.getElementById('table-selection-view').classList.remove('hidden');
+			document.getElementById('order-view').classList.add('hidden');
+			currentTable = null;
+			currentOrder = { items: [] };
+			renderTables();
+		}
+
+		// Renderizar categorías
+		function renderCategories() {
+			const categories = ['all', ...new Set(AppState.menuItems.map(item => item.category))];
+			const container = document.getElementById('category-filter');
+			container.innerHTML = categories.map(cat => `
+				<button class="category-btn ${cat === selectedCategory ? 'active' : ''}" 
+						onclick="filterCategory('${cat}')">
+					${cat === 'all' ? 'Todos' : cat}
+				</button>
+			`).join('');
+		}
+
+		// Filtrar por categoría
+		function filterCategory(category) {
+			selectedCategory = category;
+			renderCategories();
+			renderMenu();
+		}
+
+		// Renderizar menú
+		function renderMenu() {
+			const filteredItems = selectedCategory === 'all' 
+				? AppState.menuItems 
+				: AppState.menuItems.filter(item => item.category === selectedCategory);
+			
+			const container = document.getElementById('menu-grid');
+			container.innerHTML = filteredItems
+				.filter(item => item.available)
+				.map(item => `
+				<div class="menu-card" onclick="addToOrder('${item.id}')">
+					${item.image ? `<img src="${item.image}" class="menu-card-image" alt="${item.name}">` : ''}
+					<div class="menu-card-body">
+						<div class="menu-card-title">${item.name}</div>
+						<div class="menu-card-description">${item.description || ''}</div>
+						<div class="menu-card-footer">
+							<div class="menu-card-price">${Utils.formatCurrency(item.price)}</div>
+							<div class="menu-card-category">${item.category}</div>
+						</div>
+					</div>
+				</div>
+			`).join('');
+		}
+
+		// Agregar al pedido
+		function addToOrder(itemId) {
+			const menuItem = AppState.menuItems.find(m => m.id === itemId);
+			if (!menuItem) return;
+
+			const existingItem = currentOrder.items.find(i => i.itemId === itemId);
+			if (existingItem) {
+				existingItem.quantity++;
+			} else {
+				currentOrder.items.push({
+					itemId: itemId,
+					name: menuItem.name,
+					price: menuItem.price,
+					quantity: 1,
+					notes: ''
+				});
+			}
+			renderOrderItems();
+		}
+
+		// Renderizar items del pedido
+		function renderOrderItems() {
+			const container = document.getElementById('order-items');
+			
+			if (currentOrder.items.length === 0) {
+				container.innerHTML = '<p class="text-center" style="color: var(--muted);">No hay productos en el pedido</p>';
+				document.getElementById('order-total').textContent = 'Total: $0.00';
+				return;
+			}
+
+			container.innerHTML = currentOrder.items.map((item, index) => `
+				<div class="order-item">
+					<div class="order-item-header">
+						<div class="order-item-name">${item.name}</div>
+						<div class="order-item-quantity">
+							<button class="quantity-btn" onclick="changeQuantity(${index}, -1)">-</button>
+							<span class="quantity-display">${item.quantity}</span>
+							<button class="quantity-btn" onclick="changeQuantity(${index}, 1)">+</button>
+							<button class="btn btn-danger btn-small" onclick="removeItem(${index})">🗑️</button>
+						</div>
+					</div>
+					<div style="color: var(--success); font-weight: 600;">
+						${Utils.formatCurrency(item.price * item.quantity)}
+					</div>
+					<div class="order-item-notes">
+						<textarea placeholder="Notas especiales (ej: sin cebolla)" 
+								  onchange="updateNotes(${index}, this.value)">${item.notes || ''}</textarea>
+					</div>
+				</div>
+			`).join('');
+
+			const total = currentOrder.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+			document.getElementById('order-total').textContent = `Total: ${Utils.formatCurrency(total)}`;
+		}
+
+		// Cambiar cantidad
+		function changeQuantity(index, delta) {
+			currentOrder.items[index].quantity += delta;
+			if (currentOrder.items[index].quantity <= 0) {
+				currentOrder.items.splice(index, 1);
+			}
+			renderOrderItems();
+		}
+
+		// Eliminar item
+		function removeItem(index) {
+			currentOrder.items.splice(index, 1);
+			renderOrderItems();
+		}
+
+		// Actualizar notas
+		function updateNotes(index, notes) {
+			currentOrder.items[index].notes = notes;
+		}
+
+		// Limpiar pedido
+		function clearOrder() {
+			if (!confirm('¿Seguro que deseas limpiar el pedido?')) return;
+			currentOrder.items = [];
+			renderOrderItems();
+		}
+
+		// Guardar pedido
+		async function saveOrder() {
+			if (currentOrder.items.length === 0) {
+				Utils.showNotification('Agrega productos al pedido', 'warning');
+				return;
+			}
+
+			const orderId = currentTable.currentOrder || Utils.generateId();
+			const total = currentOrder.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+			const order = {
+				id: orderId,
+				tableId: currentTable.id,
+				tableNumber: currentTable.number,
+				items: currentOrder.items,
+				total: total,
+				status: 'pending',
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString()
+			};
+
+			// Actualizar o agregar orden
+			const orderIndex = AppState.orders.findIndex(o => o.id === orderId);
+			if (orderIndex >= 0) {
+				AppState.orders[orderIndex] = order;
+			} else {
+				AppState.orders.push(order);
+			}
+
+			// Actualizar mesa
+			currentTable.status = 'occupied';
+			currentTable.currentOrder = orderId;
+			const tableIndex = AppState.tables.findIndex(t => t.id === currentTable.id);
+			AppState.tables[tableIndex] = currentTable;
+
+			// Guardar en API
+			await API.save('orders', AppState.orders);
+			await API.save('tables', AppState.tables);
+
+			Utils.showNotification('Pedido guardado correctamente', 'success');
+			backToTables();
+		}
+
+		// Función para cerrar sesión
+		function logout() {
+			if (confirm('¿Cerrar sesión?')) {
+				localStorage.removeItem('userSession');
+				window.location.href = '/login.html';
+			}
+		}
+
+		// Iniciar aplicación
+		init();
+	</script>
+</body>
+</html>

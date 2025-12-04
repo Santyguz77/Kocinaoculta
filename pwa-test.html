@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="theme-color" content="#000000">
+	<link rel="manifest" href="/manifest.json">
+	<link rel="icon" type="image/png" href="/image.png">
+	<title>Test PWA - Restaurante</title>
+	<style>
+		body {
+			font-family: Arial, sans-serif;
+			background: #000000;
+			color: #ffffff;
+			padding: 20px;
+			max-width: 600px;
+			margin: 0 auto;
+		}
+		h1 { color: #ffffff; }
+		.test-item {
+			background: #1a1a1a;
+			padding: 15px;
+			margin: 10px 0;
+			border-radius: 8px;
+			border-left: 4px solid #666;
+		}
+		.test-item.success { border-left-color: #ffffff; }
+		.test-item.error { border-left-color: #999999; }
+		.test-item.warning { border-left-color: #ff9800; }
+		button {
+			background: #ffffff;
+			color: #000000;
+			border: none;
+			padding: 12px 24px;
+			border-radius: 8px;
+			cursor: pointer;
+			font-size: 16px;
+			margin: 10px 5px;
+		}
+		button:hover { background: #e0e0e0; }
+		pre {
+			background: #0a0503;
+			padding: 10px;
+			border-radius: 4px;
+			overflow-x: auto;
+			font-size: 12px;
+		}
+		.icon-preview {
+			width: 100px;
+			height: 100px;
+			border-radius: 12px;
+			margin: 10px;
+		}
+	</style>
+</head>
+<body>
+	<h1>🔍 Diagnóstico PWA</h1>
+	<p>Verifica si tu app cumple los requisitos para instalación</p>
+	
+	<button onclick="runTests()">Ejecutar Tests</button>
+	<button onclick="installApp()" id="installBtn" style="display:none;">📱 Instalar App</button>
+	
+	<div id="results"></div>
+
+	<script>
+		let deferredPrompt;
+		
+		// Capturar evento de instalación
+		window.addEventListener('beforeinstallprompt', (e) => {
+			e.preventDefault();
+			deferredPrompt = e;
+			document.getElementById('installBtn').style.display = 'inline-block';
+			addResult('✅ App es instalable', 'El navegador detectó que la PWA puede instalarse', 'success');
+		});
+		
+		window.addEventListener('appinstalled', () => {
+			addResult('✅ App instalada', 'La PWA se instaló correctamente', 'success');
+			deferredPrompt = null;
+		});
+		
+		function addResult(title, content, type = 'test-item') {
+			const div = document.createElement('div');
+			div.className = `test-item ${type}`;
+			div.innerHTML = `<strong>${title}</strong><div>${content}</div>`;
+			document.getElementById('results').appendChild(div);
+		}
+		
+		async function installApp() {
+			if (!deferredPrompt) {
+				alert('La app ya está instalada o no está disponible para instalar');
+				return;
+			}
+			
+			deferredPrompt.prompt();
+			const { outcome } = await deferredPrompt.userChoice;
+			
+			if (outcome === 'accepted') {
+				addResult('✅ Instalación aceptada', 'El usuario aceptó instalar la app', 'success');
+			} else {
+				addResult('❌ Instalación cancelada', 'El usuario rechazó la instalación', 'warning');
+			}
+			
+			deferredPrompt = null;
+			document.getElementById('installBtn').style.display = 'none';
+		}
+		
+		async function runTests() {
+			document.getElementById('results').innerHTML = '';
+			
+			// Test 1: HTTPS
+			const isHTTPS = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+			addResult(
+				isHTTPS ? '✅ HTTPS' : '❌ HTTPS requerido',
+				isHTTPS ? 'El sitio usa conexión segura' : 'PWA requiere HTTPS (excepto en localhost)',
+				isHTTPS ? 'success' : 'error'
+			);
+			
+			// Test 2: Manifest
+			try {
+				const manifestResponse = await fetch('/manifest.json');
+				if (manifestResponse.ok) {
+					const manifest = await manifestResponse.json();
+					addResult('✅ Manifest encontrado', `<pre>${JSON.stringify(manifest, null, 2)}</pre>`, 'success');
+					
+					// Verificar campos requeridos
+					const required = ['name', 'short_name', 'start_url', 'display', 'icons'];
+					const missing = required.filter(field => !manifest[field]);
+					
+					if (missing.length > 0) {
+						addResult('⚠️ Campos faltantes', `Faltan: ${missing.join(', ')}`, 'warning');
+					}
+					
+					// Verificar iconos
+					if (manifest.icons && manifest.icons.length > 0) {
+						const hasRequired = manifest.icons.some(icon => 
+							icon.sizes.includes('192x192') || icon.sizes.includes('512x512')
+						);
+						addResult(
+							hasRequired ? '✅ Iconos OK' : '⚠️ Iconos insuficientes',
+							hasRequired ? 'Tiene iconos de 192x192 o 512x512' : 'Se recomienda iconos de 192x192 y 512x512',
+							hasRequired ? 'success' : 'warning'
+						);
+						
+						// Preview del icono
+						const iconDiv = document.createElement('div');
+						iconDiv.className = 'test-item';
+						iconDiv.innerHTML = `<strong>Vista previa del icono:</strong><br><img src="${manifest.icons[0].src}" class="icon-preview" onerror="this.parentElement.innerHTML='❌ No se pudo cargar la imagen'">`;
+						document.getElementById('results').appendChild(iconDiv);
+					}
+				} else {
+					addResult('❌ Manifest no encontrado', 'No se pudo cargar /manifest.json', 'error');
+				}
+			} catch (error) {
+				addResult('❌ Error en Manifest', error.message, 'error');
+			}
+			
+			// Test 3: Service Worker
+			if ('serviceWorker' in navigator) {
+				const registrations = await navigator.serviceWorker.getRegistrations();
+				if (registrations.length > 0) {
+					addResult('✅ Service Worker registrado', `${registrations.length} registraciones activas`, 'success');
+					registrations.forEach((reg, i) => {
+						addResult(`SW #${i+1}`, `Scope: ${reg.scope}<br>Estado: ${reg.active ? 'Activo' : 'Inactivo'}`, 'success');
+					});
+				} else {
+					addResult('❌ Service Worker no registrado', 'No hay service workers activos', 'error');
+				}
+			} else {
+				addResult('❌ Service Workers no soportados', 'Este navegador no soporta Service Workers', 'error');
+			}
+			
+			// Test 4: Instalabilidad
+			if (deferredPrompt) {
+				addResult('✅ Evento beforeinstallprompt capturado', 'La app puede instalarse ahora', 'success');
+			} else {
+				addResult('⚠️ Sin evento de instalación', 'Puede que ya esté instalada o falten requisitos', 'warning');
+			}
+			
+			// Test 5: Verificar si ya está instalada
+			if (window.matchMedia('(display-mode: standalone)').matches) {
+				addResult('✅ App ya instalada', 'Estás ejecutando la PWA instalada', 'success');
+			}
+		}
+		
+		// Auto-ejecutar al cargar
+		window.addEventListener('load', () => {
+			setTimeout(runTests, 500);
+		});
+	</script>
+</body>
+</html>

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="theme-color" content="#000000">
+	<link rel="manifest" href="/manifest.json">
+	<link rel="icon" type="image/png" href="/image.png">
+	<link rel="apple-touch-icon" href="/image.png">
+	<link rel="stylesheet" href="styles.css">
+	<title>Menú - Kocina Oculta</title>
+	<style>
+		.menu-layout {
+			max-width: 1200px;
+			margin: 0 auto;
+		}
+		.menu-header {
+			text-align: center;
+			padding: 40px 20px;
+			background: linear-gradient(135deg, var(--panel), var(--card));
+			border-radius: 12px;
+			margin-bottom: 30px;
+		}
+		.menu-header h1 {
+			font-size: 48px;
+			color: var(--accent);
+			margin-bottom: 10px;
+		}
+		.menu-header p {
+			font-size: 18px;
+			color: var(--muted);
+		}
+		.search-bar {
+			max-width: 500px;
+			margin: 0 auto 30px;
+		}
+		.search-bar input {
+			width: 100%;
+			padding: 15px 20px;
+			font-size: 16px;
+			border-radius: 25px;
+		}
+		.category-section {
+			margin-bottom: 40px;
+		}
+		.category-title {
+			font-size: 28px;
+			color: var(--accent);
+			margin-bottom: 20px;
+			padding-bottom: 10px;
+			border-bottom: 2px solid var(--accent);
+		}
+		.menu-item-card {
+			display: flex;
+			background: linear-gradient(135deg, var(--panel), var(--card));
+			border-radius: 12px;
+			overflow: hidden;
+			margin-bottom: 20px;
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+			transition: all 0.3s;
+			border: 1px solid rgba(255, 255, 255, 0.05);
+		}
+		.menu-item-card:hover {
+			transform: translateX(10px);
+			box-shadow: 0 6px 20px rgba(255, 255, 255, 0.3);
+		}
+		.menu-item-content {
+			flex: 1;
+			padding: 20px;
+		}
+		.menu-item-name {
+			font-size: 22px;
+			font-weight: 700;
+			color: var(--accent);
+			margin-bottom: 8px;
+		}
+		.menu-item-description {
+			color: var(--muted);
+			margin-bottom: 15px;
+			line-height: 1.5;
+		}
+		.menu-item-price {
+			font-size: 28px;
+			font-weight: 700;
+			color: var(--success);
+		}
+		.not-available {
+			opacity: 0.5;
+		}
+		.not-available-badge {
+			display: inline-block;
+			background: var(--danger);
+			color: #fff;
+			padding: 4px 12px;
+			border-radius: 12px;
+			font-size: 12px;
+			margin-left: 10px;
+		}
+		.category-filter {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 12px;
+			justify-content: center;
+			margin-bottom: 40px;
+			padding: 0 20px;
+		}
+		.category-btn {
+			background: rgba(255, 255, 255, 0.05);
+			color: var(--text);
+			border: 2px solid rgba(255, 255, 255, 0.2);
+			padding: 12px 24px;
+			border-radius: 25px;
+			font-size: 15px;
+			font-weight: 600;
+			cursor: pointer;
+			transition: all 0.3s ease;
+			backdrop-filter: blur(10px);
+		}
+		.category-btn:hover {
+			background: rgba(255, 255, 255, 0.1);
+			border-color: var(--accent);
+			color: var(--accent);
+			transform: translateY(-2px);
+			box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+		}
+		.category-btn.active {
+			background: linear-gradient(135deg, #ffffff, #e0e0e0);
+			color: #000000;
+			border-color: #ffffff;
+			box-shadow: 0 6px 16px rgba(255, 255, 255, 0.4);
+		}
+		@media (max-width: 768px) {
+			.menu-header h1 {
+				font-size: 36px;
+			}
+			.menu-item-name {
+				font-size: 18px;
+			}
+			.menu-item-price {
+				font-size: 24px;
+			}
+		}
+	</style>
+</head>
+<body>
+	<div class="app">
+		<div class="main menu-layout">
+			<div class="menu-header">
+				<img src="image.png" alt="Logo" style="width: 80px; height: 80px; border-radius: 50%; margin-bottom: 15px;">
+				<h1>Nuestro Menú</h1>
+				<p>Descubre nuestra deliciosa selección</p>
+			</div>
+
+			<div class="search-bar">
+				<input type="text" id="search-input" placeholder="🔍 Buscar platillo..." onkeyup="searchMenu()">
+			</div>
+
+			<div class="category-filter">
+				<button class="category-btn active" onclick="filterByCategory('all')">Todos</button>
+			</div>
+
+			<div id="menu-content"></div>
+		</div>
+	</div>
+
+	<script src="app.js"></script>
+	<script>
+		let allMenuItems = [];
+		let currentFilter = 'all';
+
+		async function init() {
+			await loadInitialData();
+			await initializeDefaultData();
+			allMenuItems = AppState.menuItems;
+			renderCategoryButtons();
+			renderMenu();
+		}
+
+		function renderCategoryButtons() {
+			const categories = [...new Set(allMenuItems.map(item => item.category))];
+			const container = document.querySelector('.category-filter');
+			
+			container.innerHTML = `
+				<button class="category-btn ${currentFilter === 'all' ? 'active' : ''}" onclick="filterByCategory('all')">Todos</button>
+				${categories.map(cat => `
+					<button class="category-btn ${currentFilter === cat ? 'active' : ''}" onclick="filterByCategory('${cat}')">${cat}</button>
+				`).join('')}
+			`;
+		}
+
+		function filterByCategory(category) {
+			currentFilter = category;
+			renderCategoryButtons();
+			renderMenu();
+		}
+
+		function searchMenu() {
+			renderMenu();
+		}
+
+		function renderMenu() {
+			const searchTerm = document.getElementById('search-input').value.toLowerCase();
+			
+			let filteredItems = currentFilter === 'all' 
+				? allMenuItems 
+				: allMenuItems.filter(item => item.category === currentFilter);
+			
+			if (searchTerm) {
+				filteredItems = filteredItems.filter(item => 
+					item.name.toLowerCase().includes(searchTerm) ||
+					(item.description && item.description.toLowerCase().includes(searchTerm))
+				);
+			}
+
+			// Agrupar por categoría
+			const itemsByCategory = {};
+			filteredItems.forEach(item => {
+				if (!itemsByCategory[item.category]) {
+					itemsByCategory[item.category] = [];
+				}
+				itemsByCategory[item.category].push(item);
+			});
+
+			const container = document.getElementById('menu-content');
+			
+			if (filteredItems.length === 0) {
+				container.innerHTML = '<p class="text-center" style="color: var(--muted); padding: 40px;">No se encontraron platillos</p>';
+				return;
+			}
+
+			container.innerHTML = Object.keys(itemsByCategory).map(category => `
+				<div class="category-section">
+					<h2 class="category-title">${category}</h2>
+					<div>
+						${itemsByCategory[category].map(item => `
+							<div class="menu-item-card ${!item.available ? 'not-available' : ''}">
+								${item.image ? `
+									<div style="width: 150px; flex-shrink: 0;">
+										<img src="${item.image}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 12px 0 0 12px;">
+									</div>
+								` : ''}
+								<div class="menu-item-content">
+									<div class="menu-item-name">
+										${item.name}
+										${!item.available ? '<span class="not-available-badge">No disponible</span>' : ''}
+									</div>
+									<div class="menu-item-description">${item.description || 'Delicioso platillo preparado con los mejores ingredientes'}</div>
+									<div class="menu-item-price">${Utils.formatCurrency(item.price)}</div>
+								</div>
+							</div>
+						`).join('')}
+					</div>
+				</div>
+			`).join('');
+		}
+
+		init();
+	</script>
+</body>
+</html>

@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="theme-color" content="#000000">
+	<link rel="manifest" href="/manifest.json">
+	<link rel="icon" type="image/png" href="/icon-192.png">
+	<link rel="apple-touch-icon" href="/icon-192.png">
+	<link rel="stylesheet" href="styles.css">
+	<title>Autoservicio - Restaurante</title>
+	<style>
+		body {
+			background: linear-gradient(135deg, #000000 0%, #0a0a0a 100%);
+			margin: 0;
+			padding: 0;
+			overflow-x: hidden;
+		}
+		
+		.kiosk-container {
+			max-width: 1200px;
+			margin: 0 auto;
+			padding: 20px;
+		}
+		
+		/* Header */
+		.kiosk-header {
+			text-align: center;
+			padding: 30px 20px;
+			background: linear-gradient(135deg, var(--panel), var(--card));
+			border-radius: 16px;
+			margin-bottom: 30px;
+			box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+		}
+		
+		.kiosk-header img {
+			width: 100px;
+			height: 100px;
+			border-radius: 50%;
+			margin-bottom: 15px;
+			box-shadow: 0 4px 16px rgba(255, 255, 255, 0.4);
+		}
+		
+		.kiosk-header h1 {
+			font-size: 42px;
+			color: var(--accent);
+			margin-bottom: 10px;
+		}
+		
+		.kiosk-header p {
+			font-size: 18px;
+			color: var(--muted);
+		}
+		
+		/* Layout principal */
+		.kiosk-layout {
+			display: grid;
+			grid-template-columns: 1fr 400px;
+			gap: 20px;
+			align-items: start;
+		}
+		
+		/* Menú */
+		.menu-section {
+			background: var(--panel);
+			border-radius: 16px;
+			padding: 25px;
+			box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+		}
+		
+		.category-tabs {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px;
+			margin-bottom: 25px;
+			padding-bottom: 20px;
+			border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+		}
+		
+		.category-tab {
+			background: rgba(255, 255, 255, 0.05);
+			color: var(--text);
+			border: 2px solid rgba(255, 255, 255, 0.2);
+			padding: 12px 24px;
+			border-radius: 25px;
+			font-size: 16px;
+			font-weight: 600;
+			cursor: pointer;
+			transition: all 0.3s ease;
+		}
+		
+		.category-tab:hover {
+			background: rgba(255, 255, 255, 0.1);
+			border-color: var(--accent);
+			transform: translateY(-2px);
+		}
+		
+		.category-tab.active {
+			background: linear-gradient(135deg, #ffffff, #e0e0e0);
+			color: #000000;
+			border-color: #ffffff;
+			box-shadow: 0 4px 12px rgba(255, 255, 255, 0.4);
+		}
+		
+		.menu-items-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+			gap: 20px;
+		}
+		
+		.menu-item-card {
+			background: linear-gradient(135deg, var(--card), var(--panel));
+			border-radius: 12px;
+			padding: 20px;
+			cursor: pointer;
+			transition: all 0.3s ease;
+			border: 2px solid transparent;
+			position: relative;
+		}
+		
+		.menu-item-card:hover {
+			transform: translateY(-5px);
+			border-color: var(--accent);
+			box-shadow: 0 8px 24px rgba(255, 255, 255, 0.3);
+		}
+		
+		.menu-item-image {
+			width: 100%;
+			height: 150px;
+			object-fit: cover;
+			border-radius: 8px;
+			margin-bottom: 15px;
+			background: rgba(0, 0, 0, 0.3);
+		}
+		
+		.menu-item-name {
+			font-size: 18px;
+			font-weight: 700;
+			color: var(--accent);
+			margin-bottom: 8px;
+		}
+		
+		.menu-item-description {
+			font-size: 13px;
+			color: var(--muted);
+			margin-bottom: 12px;
+			line-height: 1.4;
+			min-height: 40px;
+		}
+		
+		.menu-item-price {
+			font-size: 24px;
+			font-weight: 700;
+			color: var(--success);
+		}
+		
+		.add-to-cart-btn {
+			width: 100%;
+			background: #ffffff;
+			color: #000000;
+			border: none;
+			padding: 12px;
+			border-radius: 8px;
+			font-size: 16px;
+			font-weight: 600;
+			cursor: pointer;
+			margin-top: 10px;
+			transition: all 0.3s;
+		}
+		
+		.add-to-cart-btn:hover {
+			background: #e0e0e0;
+			transform: scale(1.05);
+		}
+		
+		/* Carrito lateral */
+		.cart-section {
+			background: var(--panel);
+			border-radius: 16px;
+			padding: 25px;
+			box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+			position: sticky;
+			top: 20px;
+			max-height: calc(100vh - 40px);
+			overflow-y: auto;
+		}
+		
+		.cart-header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			margin-bottom: 20px;
+			padding-bottom: 15px;
+			border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+		}
+		
+		.cart-header h2 {
+			font-size: 24px;
+			color: var(--accent);
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+		
+		.cart-count {
+			background: #ffffff;
+			color: #000000;
+			border-radius: 50%;
+			width: 30px;
+			height: 30px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 14px;
+			font-weight: 700;
+		}
+		
+		.cart-empty {
+			text-align: center;
+			padding: 40px 20px;
+			color: var(--muted);
+		}
+		
+		.cart-empty-icon {
+			font-size: 64px;
+			margin-bottom: 15px;
+			opacity: 0.3;
+		}
+		
+		.cart-items {
+			margin-bottom: 20px;
+		}
+		
+		.cart-item {
+			background: rgba(0, 0, 0, 0.3);
+			padding: 15px;
+			border-radius: 8px;
+			margin-bottom: 10px;
+			border-left: 3px solid var(--accent);
+		}
+		
+		.cart-item-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: start;
+			margin-bottom: 10px;
+		}
+		
+		.cart-item-name {
+			font-weight: 600;
+			color: var(--accent);
+			font-size: 15px;
+			flex: 1;
+		}
+		
+		.cart-item-remove {
+			background: var(--danger);
+			color: white;
+			border: none;
+			width: 25px;
+			height: 25px;
+			border-radius: 50%;
+			cursor: pointer;
+			font-size: 16px;
+			line-height: 1;
+		}
+		
+		.cart-item-controls {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+		}
+		
+		.quantity-controls {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+		
+		.qty-btn {
+			background: var(--accent);
+			color: white;
+			border: none;
+			width: 30px;
+			height: 30px;
+			border-radius: 50%;
+			cursor: pointer;
+			font-size: 16px;
+			font-weight: 700;
+		}
+		
+		.qty-display {
+			font-size: 18px;
+			font-weight: 700;
+			min-width: 30px;
+			text-align: center;
+		}
+		
+		.cart-item-price {
+			font-size: 18px;
+			font-weight: 700;
+			color: var(--success);
+		}
+		
+		.cart-total {
+			background: linear-gradient(135deg, #ffffff, #e0e0e0);
+			padding: 20px;
+			border-radius: 12px;
+			margin-bottom: 15px;
+		}
+		
+		.cart-total-label {
+			font-size: 16px;
+			color: #000000;
+			margin-bottom: 5px;
+		}
+		
+		.cart-total-amount {
+			font-size: 36px;
+			font-weight: 700;
+			color: #000000;
+		}
+		
+		.checkout-btn {
+			width: 100%;
+			background: #ffffff;
+			color: #000000;
+			border: none;
+			padding: 18px;
+			border-radius: 12px;
+			font-size: 18px;
+			font-weight: 700;
+			cursor: pointer;
+			transition: all 0.3s;
+			box-shadow: 0 4px 16px rgba(76, 175, 80, 0.4);
+		}
+		
+		.checkout-btn:hover {
+			transform: translateY(-2px);
+			box-shadow: 0 6px 20px rgba(76, 175, 80, 0.5);
+		}
+		
+		.checkout-btn:disabled {
+			opacity: 0.5;
+			cursor: not-allowed;
+		}
+		
+		.clear-cart-btn {
+			width: 100%;
+			background: transparent;
+			color: var(--danger);
+			border: 2px solid var(--danger);
+			padding: 12px;
+			border-radius: 8px;
+			font-size: 14px;
+			font-weight: 600;
+			cursor: pointer;
+			margin-top: 10px;
+		}
+		
+		/* Modal de confirmación */
+		.modal {
+			display: none;
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background: rgba(0, 0, 0, 0.8);
+			z-index: 9999;
+			align-items: center;
+			justify-content: center;
+		}
+		
+		.modal.active {
+			display: flex;
+		}
+		
+		.modal-content {
+			background: var(--panel);
+			padding: 40px;
+			border-radius: 16px;
+			max-width: 500px;
+			text-align: center;
+			box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+		}
+		
+		.modal-icon {
+			font-size: 80px;
+			margin-bottom: 20px;
+		}
+		
+		.modal-content h2 {
+			font-size: 32px;
+			color: var(--success);
+			margin-bottom: 15px;
+		}
+		
+		.modal-content p {
+			font-size: 18px;
+			color: var(--muted);
+			margin-bottom: 30px;
+		}
+		
+		.modal-btn {
+			background: var(--accent);
+			color: white;
+			border: none;
+			padding: 15px 40px;
+			border-radius: 12px;
+			font-size: 18px;
+			font-weight: 700;
+			cursor: pointer;
+		}
+		
+		@media (max-width: 1024px) {
+			.kiosk-layout {
+				grid-template-columns: 1fr;
+			}
+			
+			.cart-section {
+				position: relative;
+				top: 0;
+				max-height: none;
+			}
+		}
+		
+		@media (max-width: 768px) {
+			.menu-items-grid {
+				grid-template-columns: 1fr;
+			}
+		}
+	</style>
+</head>
+<body>
+	<div class="kiosk-container">
+		<div class="kiosk-header">
+			<img src="image.png" alt="Logo">
+			<h1>🍽️ Autoservicio</h1>
+			<p>Haz tu pedido para llevar</p>
+		</div>
+		
+		<div class="kiosk-layout">
+			<!-- Menú -->
+			<div class="menu-section">
+				<div class="category-tabs" id="category-tabs"></div>
+				<div class="menu-items-grid" id="menu-items"></div>
+			</div>
+			
+			<!-- Carrito -->
+			<div class="cart-section">
+				<div class="cart-header">
+					<h2>
+						🛒 Tu Pedido
+						<span class="cart-count" id="cart-count">0</span>
+					</h2>
+				</div>
+				
+				<div id="cart-content">
+					<div class="cart-empty">
+						<div class="cart-empty-icon">🍽️</div>
+						<p>Tu carrito está vacío</p>
+						<p style="font-size: 14px;">Agrega productos del menú</p>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	<!-- Modal de confirmación -->
+	<div class="modal" id="success-modal">
+		<div class="modal-content">
+			<div class="modal-icon">✅</div>
+			<h2>¡Pedido Realizado!</h2>
+			<p>Tu orden ha sido enviada con éxito</p>
+			<p style="font-size: 16px; color: var(--muted);">Número de orden: <strong id="order-number"></strong></p>
+			<button class="modal-btn" onclick="closeModalAndReset()">Hacer Otro Pedido</button>
+		</div>
+	</div>
+
+	<script src="app.js"></script>
+	<script>
+		let cart = [];
+		let currentCategory = 'all';
+
+		async function init() {
+			await loadInitialData();
+			await initializeDefaultData();
+			renderCategoryTabs();
+			renderMenuItems();
+			renderCart();
+		}
+
+		function renderCategoryTabs() {
+			const categories = [...new Set(AppState.menuItems.map(item => item.category))];
+			const container = document.getElementById('category-tabs');
+			
+			container.innerHTML = `
+				<button class="category-tab ${currentCategory === 'all' ? 'active' : ''}" onclick="filterCategory('all')">
+					Todos
+				</button>
+				${categories.map(cat => `
+					<button class="category-tab ${currentCategory === cat ? 'active' : ''}" onclick="filterCategory('${cat}')">
+						${cat}
+					</button>
+				`).join('')}
+			`;
+		}
+
+		function filterCategory(category) {
+			currentCategory = category;
+			renderCategoryTabs();
+			renderMenuItems();
+		}
+
+		function renderMenuItems() {
+			const container = document.getElementById('menu-items');
+			const items = currentCategory === 'all' 
+				? AppState.menuItems 
+				: AppState.menuItems.filter(item => item.category === currentCategory);
+			
+			const availableItems = items.filter(item => item.available !== false);
+			
+			container.innerHTML = availableItems.map(item => `
+				<div class="menu-item-card">
+					${item.image ? `<img src="${item.image}" class="menu-item-image" alt="${item.name}">` : `<div class="menu-item-image"></div>`}
+					<div class="menu-item-name">${item.name}</div>
+					<div class="menu-item-description">${item.description || 'Delicioso platillo'}</div>
+					<div class="menu-item-price">${Utils.formatCurrency(item.price)}</div>
+					<button class="add-to-cart-btn" onclick='addToCart(${JSON.stringify(item)})'>
+						➕ Agregar
+					</button>
+				</div>
+			`).join('');
+		}
+
+		function addToCart(item) {
+			const existingItem = cart.find(i => i.id === item.id);
+			
+			if (existingItem) {
+				existingItem.quantity++;
+			} else {
+				cart.push({
+					...item,
+					quantity: 1
+				});
+			}
+			
+			renderCart();
+			
+			// Animación de feedback
+			const btn = event.target;
+			btn.textContent = '✓ Agregado';
+			btn.style.background = '#ffffff';
+			setTimeout(() => {
+				btn.textContent = '➕ Agregar';
+				btn.style.background = '';
+			}, 1000);
+		}
+
+		function removeFromCart(itemId) {
+			cart = cart.filter(item => item.id !== itemId);
+			renderCart();
+		}
+
+		function updateQuantity(itemId, change) {
+			const item = cart.find(i => i.id === itemId);
+			if (item) {
+				item.quantity += change;
+				if (item.quantity <= 0) {
+					removeFromCart(itemId);
+				} else {
+					renderCart();
+				}
+			}
+		}
+
+		function clearCart() {
+			if (confirm('¿Vaciar el carrito?')) {
+				cart = [];
+				renderCart();
+			}
+		}
+
+		function renderCart() {
+			const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+			const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+			
+			document.getElementById('cart-count').textContent = count;
+			
+			const container = document.getElementById('cart-content');
+			
+			if (cart.length === 0) {
+				container.innerHTML = `
+					<div class="cart-empty">
+						<div class="cart-empty-icon">🍽️</div>
+						<p>Tu carrito está vacío</p>
+						<p style="font-size: 14px;">Agrega productos del menú</p>
+					</div>
+				`;
+				return;
+			}
+			
+			container.innerHTML = `
+				<div class="cart-items">
+					${cart.map(item => `
+						<div class="cart-item">
+							<div class="cart-item-header">
+								<div class="cart-item-name">${item.name}</div>
+								<button class="cart-item-remove" onclick="removeFromCart('${item.id}')">×</button>
+							</div>
+							<div class="cart-item-controls">
+								<div class="quantity-controls">
+									<button class="qty-btn" onclick="updateQuantity('${item.id}', -1)">−</button>
+									<div class="qty-display">${item.quantity}</div>
+									<button class="qty-btn" onclick="updateQuantity('${item.id}', 1)">+</button>
+								</div>
+								<div class="cart-item-price">${Utils.formatCurrency(item.price * item.quantity)}</div>
+							</div>
+						</div>
+					`).join('')}
+				</div>
+				
+				<div class="cart-total">
+					<div class="cart-total-label">Total a Pagar</div>
+					<div class="cart-total-amount">${Utils.formatCurrency(total)}</div>
+				</div>
+				
+				<button class="checkout-btn" onclick="checkout()">
+					🛍️ Realizar Pedido
+				</button>
+				
+				<button class="clear-cart-btn" onclick="clearCart()">
+					🗑️ Vaciar Carrito
+				</button>
+			`;
+		}
+
+		async function checkout() {
+			if (cart.length === 0) {
+				alert('El carrito está vacío');
+				return;
+			}
+			
+			const btn = event.target;
+			btn.disabled = true;
+			btn.textContent = '⏳ Procesando...';
+			
+			try {
+				// Crear nueva mesa única para este pedido
+				const tableNumber = generateTakeawayNumber();
+				const tableId = Utils.generateId();
+				
+				const newTable = {
+					id: tableId,
+					number: tableNumber,
+					capacity: 0,
+					status: 'occupied',
+					currentOrder: null,
+					isTakeaway: true // Marcador para identificar pedidos para llevar
+				};
+				
+				// Crear orden
+				const orderId = Utils.generateId();
+				const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+				
+				const order = {
+					id: orderId,
+					tableId: tableId,
+					tableNumber: tableNumber,
+					items: cart.map(item => ({
+						id: item.id,
+						name: item.name,
+						price: item.price,
+						quantity: item.quantity,
+						notes: ''
+					})),
+					total: total,
+					status: 'pending',
+					createdAt: new Date().toISOString(),
+					isTakeaway: true
+				};
+				
+				// Actualizar mesa con la orden
+				newTable.currentOrder = orderId;
+				
+				// Agregar al estado
+				AppState.tables.push(newTable);
+				AppState.orders.push(order);
+				
+				// Guardar en backend
+				await API.save('orders', AppState.orders);
+				await API.save('tables', AppState.tables);
+				
+				// Mostrar modal de éxito
+				document.getElementById('order-number').textContent = tableNumber;
+				document.getElementById('success-modal').classList.add('active');
+				
+			} catch (error) {
+				alert('Error al procesar el pedido. Intenta nuevamente.');
+				console.error(error);
+				btn.disabled = false;
+				btn.textContent = '🛍️ Realizar Pedido';
+			}
+		}
+		
+		// Generar número único para pedido para llevar
+		function generateTakeawayNumber() {
+			const takeawayTables = AppState.tables.filter(t => t.isTakeaway);
+			const nextNumber = takeawayTables.length + 1;
+			return `PL-${String(nextNumber).padStart(3, '0')}`;
+		}
+
+		function closeModalAndReset() {
+			document.getElementById('success-modal').classList.remove('active');
+			cart = [];
+			renderCart();
+		}
+
+		init();
+	</script>
+</body>
+</html>

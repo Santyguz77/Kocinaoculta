@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Test Backend - Restaurante</title>
+	<style>
+		body {
+			font-family: 'Courier New', monospace;
+			background: #000000;
+			color: #ffffff;
+			padding: 20px;
+			max-width: 800px;
+			margin: 0 auto;
+		}
+		h1 {
+			color: #ffffff;
+		}
+		.test-result {
+			background: #1a1a1a;
+			padding: 15px;
+			margin: 10px 0;
+			border-radius: 8px;
+			border-left: 4px solid #ffffff;
+		}
+		.success {
+			border-left-color: #ffffff;
+		}
+		.error {
+			border-left-color: #999999;
+		}
+		.info {
+			background: #1a3a4a;
+			padding: 10px;
+			margin: 5px 0;
+			border-radius: 4px;
+			font-size: 12px;
+		}
+		button {
+			background: #ffffff;
+			color: #000000;
+			border: none;
+			padding: 12px 24px;
+			border-radius: 8px;
+			cursor: pointer;
+			font-size: 16px;
+			margin: 10px 0;
+		}
+		button:hover {
+			background: #e0e0e0;
+		}
+		pre {
+			background: #0a0503;
+			padding: 10px;
+			border-radius: 4px;
+			overflow-x: auto;
+		}
+	</style>
+</head>
+<body>
+	<h1>🔧 Test de Conexión Backend</h1>
+	<p>Verifica la conexión con tu servidor y las tablas disponibles</p>
+	
+	<button onclick="runTests()">Ejecutar Tests</button>
+	<button onclick="clearResults()">Limpiar</button>
+	
+	<div id="results"></div>
+
+	<script>
+		const API_URL = 'https://auction-array-comedy-its.trycloudflare.com/api';
+		const TABLES = ['menu_items', 'tables', 'orders', 'transactions', 'waiters', 'config', 'cash_closures'];
+		
+		function addResult(title, content, type = 'info') {
+			const resultsDiv = document.getElementById('results');
+			const div = document.createElement('div');
+			div.className = `test-result ${type}`;
+			div.innerHTML = `
+				<h3>${title}</h3>
+				<div class="info">${content}</div>
+			`;
+			resultsDiv.appendChild(div);
+		}
+		
+		function clearResults() {
+			document.getElementById('results').innerHTML = '';
+		}
+		
+		async function runTests() {
+			clearResults();
+			addResult('🚀 Iniciando tests...', 'Probando conexión con: ' + API_URL, 'info');
+			
+			// Test 1: Verificar que el servidor responde
+			try {
+				const baseUrl = API_URL.replace('/api', '');
+				const response = await fetch(baseUrl);
+				const text = await response.text();
+				addResult('✅ Servidor accesible', `<pre>${text}</pre>`, 'success');
+			} catch (error) {
+				addResult('❌ Error de conexión', `No se puede acceder al servidor: ${error.message}`, 'error');
+				return;
+			}
+			
+			// Test 2: Verificar cada tabla
+			for (const table of TABLES) {
+				try {
+					const response = await fetch(`${API_URL}/${table}`);
+					if (!response.ok) {
+						throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+					}
+					const data = await response.json();
+					addResult(
+						`✅ Tabla: ${table}`,
+						`<pre>Registros encontrados: ${data.length}\n${data.length > 0 ? 'Primer registro: ' + JSON.stringify(data[0], null, 2).substring(0, 200) + '...' : 'Sin datos'}</pre>`,
+						'success'
+					);
+				} catch (error) {
+					addResult(
+						`❌ Tabla: ${table}`,
+						`<pre>Error: ${error.message}</pre>`,
+						'error'
+					);
+				}
+			}
+			
+			addResult('🏁 Tests completados', 'Revisa los resultados arriba', 'info');
+		}
+	</script>
+</body>
+</html>

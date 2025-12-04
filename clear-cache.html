@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Limpiar Caché PWA</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #000000;
+            color: #ffffff;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        h1 { color: #ffffff; }
+        button {
+            background: #ffffff;
+            color: #000000;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            width: 100%;
+        }
+        button:hover { background: #e0e0e0; }
+        .result {
+            background: #1a1a1a;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #ffffff;
+        }
+        .success { border-left-color: #ffffff; }
+        .error { border-left-color: #999999; }
+    </style>
+</head>
+<body>
+    <h1>🧹 Limpiar Caché PWA</h1>
+    <p>Si la PWA no se actualiza correctamente, usa este limpiador</p>
+    
+    <button onclick="clearAllCaches()">🗑️ Limpiar Todo el Caché</button>
+    <button onclick="unregisterServiceWorker()">🔄 Desregistrar Service Worker</button>
+    <button onclick="clearEverything()">💣 Limpieza Completa (Recomendado)</button>
+    <button onclick="location.reload(true)">♻️ Recargar Página (Ctrl+Shift+R)</button>
+    
+    <div id="results"></div>
+
+    <script>
+        function addResult(message, type = 'result') {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.textContent = message;
+            document.getElementById('results').appendChild(div);
+        }
+
+        async function clearAllCaches() {
+            document.getElementById('results').innerHTML = '';
+            try {
+                const cacheNames = await caches.keys();
+                addResult(`Encontrados ${cacheNames.length} cachés`);
+                
+                for (const name of cacheNames) {
+                    await caches.delete(name);
+                    addResult(`✅ Eliminado: ${name}`, 'success');
+                }
+                
+                addResult('✅ Todos los cachés eliminados', 'success');
+            } catch (error) {
+                addResult(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function unregisterServiceWorker() {
+            document.getElementById('results').innerHTML = '';
+            try {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                addResult(`Encontrados ${registrations.length} Service Workers`);
+                
+                for (const registration of registrations) {
+                    await registration.unregister();
+                    addResult(`✅ Service Worker desregistrado: ${registration.scope}`, 'success');
+                }
+                
+                addResult('✅ Todos los Service Workers eliminados', 'success');
+            } catch (error) {
+                addResult(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function clearEverything() {
+            document.getElementById('results').innerHTML = '';
+            addResult('🧹 Iniciando limpieza completa...');
+            
+            // 1. Limpiar cachés
+            try {
+                const cacheNames = await caches.keys();
+                for (const name of cacheNames) {
+                    await caches.delete(name);
+                }
+                addResult('✅ Cachés eliminados', 'success');
+            } catch (error) {
+                addResult(`⚠️ Error en cachés: ${error.message}`, 'error');
+            }
+            
+            // 2. Desregistrar Service Workers
+            try {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (const registration of registrations) {
+                    await registration.unregister();
+                }
+                addResult('✅ Service Workers eliminados', 'success');
+            } catch (error) {
+                addResult(`⚠️ Error en SW: ${error.message}`, 'error');
+            }
+            
+            // 3. Limpiar localStorage
+            try {
+                localStorage.clear();
+                addResult('✅ LocalStorage limpiado', 'success');
+            } catch (error) {
+                addResult(`⚠️ Error en localStorage: ${error.message}`, 'error');
+            }
+            
+            addResult('✅ LIMPIEZA COMPLETA. Ahora cierra la app y abrela de nuevo.', 'success');
+            
+            // Esperar 2 segundos y recargar
+            setTimeout(() => {
+                location.reload(true);
+            }, 2000);
+        }
+
+        // Auto-mostrar información al cargar
+        window.addEventListener('load', async () => {
+            const cacheNames = await caches.keys();
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            
+            addResult(`📊 Estado actual:`);
+            addResult(`• Cachés activos: ${cacheNames.length}`);
+            addResult(`• Service Workers: ${registrations.length}`);
+            
+            if (cacheNames.length > 0) {
+                addResult(`Cachés: ${cacheNames.join(', ')}`);
+            }
+        });
+    </script>
+</body>
+</html>
