@@ -739,6 +739,7 @@
 		}
 
 		// SISTEMA DE NOTIFICACIONES DE COCINA
+		// Para mismo dispositivo (mismo localStorage)
 		window.addEventListener('storage', (e) => {
 			if (e.key === 'kitchenNotification' && e.newValue) {
 				const notification = JSON.parse(e.newValue);
@@ -747,6 +748,38 @@
 				localStorage.removeItem('kitchenNotification');
 			}
 		});
+
+		// Para diferentes dispositivos (polling de pedidos listos)
+		let lastNotifiedOrders = new Set();
+		setInterval(async () => {
+			// Verificar pedidos que están completamente listos y no han sido notificados
+			const ordersToNotify = AppState.orders.filter(order => {
+				return order.status === 'pending' && 
+				       order.items.length > 0 &&
+				       order.items.every(item => item.kitchenStatus === 'ready') &&
+				       order.kitchenNotifiedAt && 
+				       !lastNotifiedOrders.has(order.id);
+			});
+
+			for (const order of ordersToNotify) {
+				// Verificar que la notificación es reciente (últimos 10 segundos)
+				const notifiedTime = new Date(order.kitchenNotifiedAt).getTime();
+				const now = Date.now();
+				if (now - notifiedTime < 10000) {
+					lastNotifiedOrders.add(order.id);
+					showKitchenReadyNotification({
+						tableNumber: order.tableNumber,
+						orderId: order.id,
+						timestamp: order.kitchenNotifiedAt
+					});
+				}
+			}
+
+			// Limpiar pedidos antiguos del set
+			if (lastNotifiedOrders.size > 50) {
+				lastNotifiedOrders.clear();
+			}
+		}, 2000); // Verificar cada 2 segundos
 
 		function showKitchenReadyNotification(notification) {
 			// Reproducir sonido de notificación
@@ -1111,69 +1144,124 @@
 		let isCompletingOrder = false;
 
 		async function completeOrder(orderId) {
-			if (isCompletingOrder) return; // Evitar doble clic
+			if (isCompletingOrder) {
+				Utils.showNotification('Operación en proceso, por favor espera...', 'warning');
+				return;
+			}
 			
 			const order = AppState.orders.find(o => o.id === orderId);
-			if (!order) return;
-
-			isCompletingOrder = true;
-
-			// Marcar como completado INMEDIATAMENTE
-			order.status = 'completed';
-			order.completedAt = new Date().toISOString();
-
-			// Agregar transacción
-			AppState.transactions.push({
-				id: Utils.generateId(),
-				orderId: order.id,
-				tableNumber: order.tableNumber,
-				amount: order.total,
-				type: 'sale',
-				date: new Date().toISOString(),
-				concept: `Mesa ${order.tableNumber} - ${order.items.length} productos`
-			});
-
-			// Liberar mesa
-			const table = AppState.tables.find(t => t.id === order.tableId);
-			if (table) {
-				if (table.isTakeaway || order.isTakeaway) {
-					AppState.tables = AppState.tables.filter(t => t.id !== table.id);
-				} else {
-					table.status = 'available';
-					table.currentOrder = null;
-				}
+			if (!order) {
+				Utils.showNotification('Pedido no encontrado', 'error');
+				return;
 			}
 
-			// Actualizar UI INMEDIATAMENTE
-			renderOrders();
-			renderDashboard();
-			renderTables();
-			renderTransactions();
+			// Confirmar con el usuario
+			if (!confirm(`¿Completar pedido de Mesa ${order.tableNumber}?\nTotal: ${Utils.formatCurrency(order.total)}`)) {
+				return;
+			}
 
-			// Generar PDF y guardar en servidor en segundo plano
-			Promise.all([
-				generateInvoicePDF(order),
-				API.save('orders', AppState.orders),
-				API.save('transactions', AppState.transactions),
-				API.save('tables', AppState.tables)
-			]).catch(error => {
+			isCompletingOrder = true;
+			Utils.showNotification('Procesando pedido...', 'info');
+
+			try {
+				// Pausar auto-refresh durante la operación
+				if (autoRefreshInterval) {
+					clearInterval(autoRefreshInterval);
+				}
+
+				// 1. Actualizar orden
+				order.status = 'completed';
+				order.completedAt = new Date().toISOString();
+
+				// 2. Crear transacción
+				const transaction = {
+					id: Utils.generateId(),
+					orderId: order.id,
+					tableNumber: order.tableNumber,
+					amount: order.total,
+					type: 'sale',
+					date: new Date().toISOString(),
+					concept: `Mesa ${order.tableNumber} - ${order.items.length} productos`
+				};
+				AppState.transactions.push(transaction);
+
+				// 3. Liberar mesa
+				const table = AppState.tables.find(t => t.id === order.tableId);
+				if (table) {
+					if (table.isTakeaway || order.isTakeaway) {
+						AppState.tables = AppState.tables.filter(t => t.id !== table.id);
+					} else {
+						table.status = 'available';
+						table.currentOrder = null;
+					}
+				}
+
+				// 4. GUARDAR TODO EN SERVIDOR (ESPERAR CONFIRMACIÓN)
+				await Promise.all([
+					API.save('orders', AppState.orders),
+					API.save('transactions', AppState.transactions),
+					API.save('tables', AppState.tables)
+				]);
+
+				// 5. Generar PDF después de confirmar guardado
+				await generateInvoicePDF(order);
+
+				// 6. RECARGAR DATOS DESDE SERVIDOR para garantizar sincronización
+				await loadInitialData();
+
+				// 7. Actualizar UI con datos frescos del servidor
+				renderOrders();
+				renderDashboard();
+				renderTables();
+				renderTransactions();
+				generateProfitabilityReport();
+
+				Utils.showNotification('Pedido completado exitosamente', 'success');
+
+			} catch (error) {
 				console.error('Error completando orden:', error);
-				alert('⚠️ Error al sincronizar. Los datos se guardaron localmente.');
-			}).finally(() => {
+				
+				// REVERTIR CAMBIOS recargando desde servidor
+				await loadInitialData();
+				renderOrders();
+				renderDashboard();
+				renderTables();
+				renderTransactions();
+				
+				Utils.showNotification('Error al completar pedido. Verifica la conexión al servidor.', 'error');
+				alert('❌ Error al completar el pedido:\n\n' + error.message + '\n\nLos cambios no se guardaron. Verifica tu conexión e intenta nuevamente.');
+				
+			} finally {
 				isCompletingOrder = false;
-			});
+				// Reiniciar auto-refresh
+				startAutoRefresh();
+			}
 		}
 
-		let isCancellingOrder = false;
+	let isCancellingOrder = false;
 
-		async function cancelOrder(orderId) {
-			if (isCancellingOrder) return;
-			if (!confirm('¿Cancelar este pedido?')) return;
-			
+	async function cancelOrder(orderId) {
+		if (isCancellingOrder) {
+			Utils.showNotification('Operación en proceso, por favor espera...', 'warning');
+			return;
+		}
+		
+		if (!confirm('¿Estás seguro de cancelar este pedido?')) return;
+
+		isCancellingOrder = true;
+		Utils.showNotification('Cancelando pedido...', 'info');
+
+		try {
+			// Pausar auto-refresh
+			if (autoRefreshInterval) {
+				clearInterval(autoRefreshInterval);
+			}
+
 			const order = AppState.orders.find(o => o.id === orderId);
-			if (!order) return;
+			if (!order) {
+				throw new Error('Pedido no encontrado');
+			}
 
-			isCancellingOrder = true;
 			order.status = 'cancelled';
 			
 			const table = AppState.tables.find(t => t.id === order.tableId);
@@ -1182,22 +1270,39 @@
 				table.currentOrder = null;
 			}
 
-			// Actualizar UI inmediatamente
-			renderOrders();
-			renderDashboard();
-
-			// Guardar en servidor en segundo plano
-			Promise.all([
+			// GUARDAR EN SERVIDOR Y ESPERAR CONFIRMACIÓN
+			await Promise.all([
 				API.save('orders', AppState.orders),
 				API.save('tables', AppState.tables)
-			]).catch(error => {
-				console.error('Error cancelando orden:', error);
-			}).finally(() => {
-				isCancellingOrder = false;
-			});
-		}
+			]);
 
-		// MENÚ CONFIG
+			// RECARGAR desde servidor
+			await loadInitialData();
+
+			// Actualizar UI
+			renderOrders();
+			renderDashboard();
+			renderTables();
+
+			Utils.showNotification('Pedido cancelado exitosamente', 'success');
+
+		} catch (error) {
+			console.error('Error cancelando orden:', error);
+			
+			// REVERTIR recargando desde servidor
+			await loadInitialData();
+			renderOrders();
+			renderDashboard();
+			renderTables();
+			
+			Utils.showNotification('Error al cancelar pedido', 'error');
+			alert('❌ Error al cancelar el pedido: ' + error.message);
+			
+		} finally {
+			isCancellingOrder = false;
+			startAutoRefresh();
+		}
+	}		// MENÚ CONFIG
 		function renderMenuConfig() {
 			const tbody = document.querySelector('#menu-table tbody');
 			tbody.innerHTML = AppState.menuItems.map(item => {
@@ -1561,27 +1666,35 @@
 			}
 		}
 
-		let isSavingOrder = false;
+	let isSavingOrder = false;
 
-		async function saveOrderFromModal() {
-			if (isSavingOrder) return; // Evitar clics múltiples
-			
-			if (!currentOrderTable || currentOrderItems.length === 0) {
-				alert('⚠️ Agrega al menos un producto');
-				return;
+	async function saveOrderFromModal() {
+		if (isSavingOrder) {
+			Utils.showNotification('Guardando pedido, por favor espera...', 'warning');
+			return;
+		}
+		
+		if (!currentOrderTable || currentOrderItems.length === 0) {
+			alert('⚠️ Agrega al menos un producto');
+			return;
+		}
+
+		isSavingOrder = true;
+		Utils.showNotification('Guardando pedido...', 'info');
+
+		try {
+			// Pausar auto-refresh
+			if (autoRefreshInterval) {
+				clearInterval(autoRefreshInterval);
 			}
 
-			isSavingOrder = true;
 			const total = currentOrderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
 			// Encontrar la mesa en el estado global
 			const tableInState = AppState.tables.find(t => t.id === currentOrderTable.id);
 			if (!tableInState) {
-				isSavingOrder = false;
-				return;
+				throw new Error('Mesa no encontrada');
 			}
-
-			let orderUpdated = false;
 
 			if (tableInState.currentOrder) {
 				// Actualizar pedido existente
@@ -1590,7 +1703,6 @@
 					order.items = [...currentOrderItems];
 					order.total = total;
 					order.updatedAt = new Date().toISOString();
-					orderUpdated = true;
 				}
 			} else {
 				// Crear nuevo pedido
@@ -1608,28 +1720,38 @@
 				// Actualizar la mesa en el estado global
 				tableInState.currentOrder = newOrder.id;
 				tableInState.status = 'occupied';
-				orderUpdated = true;
 			}
 
-			// Actualizar UI inmediatamente
+			// GUARDAR EN SERVIDOR Y ESPERAR CONFIRMACIÓN
+			await Promise.all([
+				API.save('orders', AppState.orders),
+				API.save('tables', AppState.tables)
+			]);
+
+			// RECARGAR desde servidor para garantizar sincronización
+			await loadInitialData();
+
+			// Cerrar modal y actualizar UI
 			closeOrderModal();
 			renderAllSections();
 
-			// Guardar en servidor en segundo plano
-			try {
-				await Promise.all([
-					API.save('orders', AppState.orders),
-					API.save('tables', AppState.tables)
-				]);
-			} catch (error) {
-				console.error('Error guardando pedido:', error);
-				alert('⚠️ Error al sincronizar con el servidor. Intenta refrescar.');
-			} finally {
-				isSavingOrder = false;
-			}
-		}
+			Utils.showNotification('Pedido guardado exitosamente', 'success');
 
-		function viewTableDetails(tableId) {
+		} catch (error) {
+			console.error('Error guardando pedido:', error);
+			
+			// REVERTIR recargando desde servidor
+			await loadInitialData();
+			renderAllSections();
+			
+			Utils.showNotification('Error al guardar pedido', 'error');
+			alert('❌ Error al guardar el pedido:\n\n' + error.message + '\n\nVerifica tu conexión e intenta nuevamente.');
+			
+		} finally {
+			isSavingOrder = false;
+			startAutoRefresh();
+		}
+	}		function viewTableDetails(tableId) {
 			const table = AppState.tables.find(t => t.id === tableId);
 			if (!table || !table.currentOrder) return;
 
