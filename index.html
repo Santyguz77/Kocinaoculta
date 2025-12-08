@@ -1144,12 +1144,9 @@
 		let isCompletingOrder = false;
 
 		async function completeOrder(orderId) {
-			if (isCompletingOrder) {
-				Utils.showNotification('Operación en proceso, por favor espera...', 'warning');
-				return;
-			}
-			
-			const order = AppState.orders.find(o => o.id === orderId);
+		if (isCompletingOrder) {
+			return;
+		}			const order = AppState.orders.find(o => o.id === orderId);
 			if (!order) {
 				Utils.showNotification('Pedido no encontrado', 'error');
 				return;
@@ -1161,7 +1158,6 @@
 			}
 
 			isCompletingOrder = true;
-			Utils.showNotification('Procesando pedido...', 'info');
 
 			try {
 				// Pausar auto-refresh durante la operación
@@ -1216,20 +1212,22 @@
 				renderTransactions();
 				generateProfitabilityReport();
 
-				Utils.showNotification('Pedido completado exitosamente', 'success');
-
 			} catch (error) {
 				console.error('Error completando orden:', error);
 				
-				// REVERTIR CAMBIOS recargando desde servidor
-				await loadInitialData();
-				renderOrders();
-				renderDashboard();
-				renderTables();
-				renderTransactions();
+				// Intentar recargar datos desde servidor (sin fallar si no hay conexión)
+				try {
+					await loadInitialData();
+					renderOrders();
+					renderDashboard();
+					renderTables();
+					renderTransactions();
+				} catch (loadError) {
+					console.error('No se pudo recargar datos:', loadError);
+				}
 				
-				Utils.showNotification('Error al completar pedido. Verifica la conexión al servidor.', 'error');
-				alert('❌ Error al completar el pedido:\n\n' + error.message + '\n\nLos cambios no se guardaron. Verifica tu conexión e intenta nuevamente.');
+				// Una sola alerta clara
+				alert('❌ ERROR AL COMPLETAR PEDIDO\n\nNo se pudo guardar en el servidor.\n\nPosibles causas:\n- Sin conexión a internet\n- Servidor fuera de línea\n\nPor favor verifica tu conexión e intenta nuevamente.');
 				
 			} finally {
 				isCompletingOrder = false;
@@ -1242,14 +1240,12 @@
 
 	async function cancelOrder(orderId) {
 		if (isCancellingOrder) {
-			Utils.showNotification('Operación en proceso, por favor espera...', 'warning');
 			return;
 		}
 		
 		if (!confirm('¿Estás seguro de cancelar este pedido?')) return;
 
 		isCancellingOrder = true;
-		Utils.showNotification('Cancelando pedido...', 'info');
 
 		try {
 			// Pausar auto-refresh
@@ -1284,19 +1280,20 @@
 			renderDashboard();
 			renderTables();
 
-			Utils.showNotification('Pedido cancelado exitosamente', 'success');
-
 		} catch (error) {
 			console.error('Error cancelando orden:', error);
 			
-			// REVERTIR recargando desde servidor
-			await loadInitialData();
-			renderOrders();
-			renderDashboard();
-			renderTables();
+			// Intentar recargar datos
+			try {
+				await loadInitialData();
+				renderOrders();
+				renderDashboard();
+				renderTables();
+			} catch (loadError) {
+				console.error('No se pudo recargar datos:', loadError);
+			}
 			
-			Utils.showNotification('Error al cancelar pedido', 'error');
-			alert('❌ Error al cancelar el pedido: ' + error.message);
+			alert('❌ ERROR AL CANCELAR PEDIDO\n\nNo se pudo guardar en el servidor.\nVerifica tu conexión e intenta nuevamente.');
 			
 		} finally {
 			isCancellingOrder = false;
@@ -1670,7 +1667,6 @@
 
 	async function saveOrderFromModal() {
 		if (isSavingOrder) {
-			Utils.showNotification('Guardando pedido, por favor espera...', 'warning');
 			return;
 		}
 		
@@ -1680,7 +1676,6 @@
 		}
 
 		isSavingOrder = true;
-		Utils.showNotification('Guardando pedido...', 'info');
 
 		try {
 			// Pausar auto-refresh
@@ -1735,17 +1730,18 @@
 			closeOrderModal();
 			renderAllSections();
 
-			Utils.showNotification('Pedido guardado exitosamente', 'success');
-
 		} catch (error) {
 			console.error('Error guardando pedido:', error);
 			
-			// REVERTIR recargando desde servidor
-			await loadInitialData();
-			renderAllSections();
+			// Intentar recargar datos
+			try {
+				await loadInitialData();
+				renderAllSections();
+			} catch (loadError) {
+				console.error('No se pudo recargar datos:', loadError);
+			}
 			
-			Utils.showNotification('Error al guardar pedido', 'error');
-			alert('❌ Error al guardar el pedido:\n\n' + error.message + '\n\nVerifica tu conexión e intenta nuevamente.');
+			alert('❌ ERROR AL GUARDAR PEDIDO\n\nNo se pudo guardar en el servidor.\nVerifica tu conexión e intenta nuevamente.');
 			
 		} finally {
 			isSavingOrder = false;

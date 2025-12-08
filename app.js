@@ -31,7 +31,9 @@ const Storage = {
 const API = {
 	async getAll(table) {
 		try {
-			const response = await fetch(`${API_URL}/${table}`);
+			const response = await fetch(`${API_URL}/${table}`, { 
+				timeout: 10000 // 10 segundos timeout
+			});
 			if (!response.ok) {
 				throw new Error(`HTTP ${response.status}: ${response.statusText}`);
 			}
@@ -39,27 +41,29 @@ const API = {
 			return data;
 		} catch (error) {
 			console.error(`Error obteniendo ${table}:`, error);
-			// Solo mostrar alerta para tablas críticas
-			if (!['cash_closures'].includes(table)) {
-				Utils.showNotification(`Error al obtener ${table}. Verifica la conexión al servidor.`, 'error');
-			}
+			// No mostrar notificación aquí, se maneja en el código llamante
 			throw error;
 		}
 	},
 	
-	async save(table, items) {
-		try {
-			const response = await fetch(`${API_URL}/${table}`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(items)
-			});
-			if (!response.ok) throw new Error('Error al guardar');
-			return await response.json();
-		} catch (error) {
-			console.error(`Error guardando ${table}:`, error);
-			Utils.showNotification(`Error al guardar ${table}. Verifica la conexión al servidor.`, 'error');
-			throw error;
+	async save(table, items, retries = 2) {
+		for (let i = 0; i <= retries; i++) {
+			try {
+				const response = await fetch(`${API_URL}/${table}`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(items)
+				});
+				if (!response.ok) throw new Error(`HTTP ${response.status}`);
+				return await response.json();
+			} catch (error) {
+				if (i === retries) {
+					console.error(`Error guardando ${table} después de ${retries + 1} intentos:`, error);
+					throw error;
+				}
+				// Esperar antes de reintentar (500ms, 1000ms)
+				await new Promise(resolve => setTimeout(resolve, 500 * (i + 1)));
+			}
 		}
 	},
 	
@@ -70,11 +74,10 @@ const API = {
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(item)
 			});
-			if (!response.ok) throw new Error('Error al actualizar');
+			if (!response.ok) throw new Error(`HTTP ${response.status}`);
 			return await response.json();
 		} catch (error) {
 			console.error(`Error actualizando ${table}/${id}:`, error);
-			Utils.showNotification(`Error al actualizar. Verifica la conexión al servidor.`, 'error');
 			throw error;
 		}
 	},
@@ -84,11 +87,10 @@ const API = {
 			const response = await fetch(`${API_URL}/${table}/${id}`, {
 				method: 'DELETE'
 			});
-			if (!response.ok) throw new Error('Error al eliminar');
+			if (!response.ok) throw new Error(`HTTP ${response.status}`);
 			return await response.json();
 		} catch (error) {
 			console.error(`Error eliminando ${table}/${id}:`, error);
-			Utils.showNotification(`Error al eliminar. Verifica la conexión al servidor.`, 'error');
 			throw error;
 		}
 	}
