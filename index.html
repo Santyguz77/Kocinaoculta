@@ -5,6 +5,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Panel de Control</title>
 	<link rel="stylesheet" href="styles.css">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.27/jspdf.plugin.autotable.min.js"></script>
@@ -207,34 +208,44 @@
 			</div>
 			<ul class="menu">
 				<li class="active" onclick="showSection('dashboard'); closeMobileMenu();">
-					<span class="menu-icon icon-dashboard"></span> Dashboard
+					<span class="menu-icon icon-dashboard"><i class="fas fa-th-large" aria-hidden="true"></i></span>
+					<span>Dashboard</span>
 				</li>
 				<li onclick="showSection('tables'); closeMobileMenu();">
-					<span class="menu-icon icon-tables"></span> Mesas
+					<span class="menu-icon icon-tables"><i class="fas fa-chair" aria-hidden="true"></i></span>
+					<span>Mesas</span>
 				</li>
 				<li onclick="showSection('orders'); closeMobileMenu();">
-					<span class="menu-icon icon-orders"></span> Pedidos
+					<span class="menu-icon icon-orders"><i class="fas fa-clipboard-list" aria-hidden="true"></i></span>
+					<span>Pedidos</span>
 				</li>
 				<li onclick="window.open('cocina.html', '_blank'); closeMobileMenu();">
-					<span class="menu-icon icon-kitchen"></span> Cocina
+					<span class="menu-icon icon-kitchen"><i class="fas fa-fire" aria-hidden="true"></i></span>
+					<span>Cocina</span>
 				</li>
 				<li onclick="showSection('menu-config'); closeMobileMenu();">
-					<span class="menu-icon icon-menu"></span> Menú
+					<span class="menu-icon icon-menu"><i class="fas fa-book-open" aria-hidden="true"></i></span>
+					<span>Menú</span>
 				</li>
 				<li onclick="showSection('transactions'); closeMobileMenu();">
-					<span class="menu-icon icon-finance"></span> Finanzas
+					<span class="menu-icon icon-finance"><i class="fas fa-dollar-sign" aria-hidden="true"></i></span>
+					<span>Finanzas</span>
 				</li>
 				<li onclick="showSection('close-cash'); closeMobileMenu();">
-					<span class="menu-icon icon-closecash"></span> Cierre de Caja
+					<span class="menu-icon icon-closecash"><i class="fas fa-wallet" aria-hidden="true"></i></span>
+					<span>Cierre de Caja</span>
 				</li>
 				<li onclick="showSection('profitability'); closeMobileMenu();">
-					<span class="menu-icon icon-profitability"></span> Rentabilidad
+					<span class="menu-icon icon-profitability"><i class="fas fa-chart-line" aria-hidden="true"></i></span>
+					<span>Rentabilidad</span>
 				</li>
 				<li onclick="showSection('system-config'); closeMobileMenu();">
-					<span class="menu-icon icon-settings"></span> Configuración
+					<span class="menu-icon icon-settings"><i class="fas fa-cog" aria-hidden="true"></i></span>
+					<span>Configuración</span>
 				</li>
 				<li onclick="logout()" style="margin-top: 20px; border-top: 1px solid rgba(255,107,53,0.2); padding-top: 15px;">
-					<span class="menu-icon icon-logout"></span> Cerrar Sesión
+					<span class="menu-icon icon-logout"><i class="fas fa-sign-out-alt" aria-hidden="true"></i></span>
+					<span>Cerrar Sesión</span>
 				</li>
 			</ul>
 		</div>
