@@ -3,16 +3,12 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<meta name="theme-color" content="#000000">
-	<link rel="manifest" href="/manifest.json">
-	<link rel="icon" type="image/png" href="/image.png">
-	<link rel="apple-touch-icon" href="/image.png">
+	<title>Panel de Control</title>
 	<link rel="stylesheet" href="styles.css">
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-	<title>Admin - Kocina Oculta</title>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.27/jspdf.plugin.autotable.min.js"></script>
 	<style>
-		/* Menú Hamburguesa */
 		.hamburger {
 			display: none;
 			position: fixed;
@@ -25,10 +21,20 @@
 			width: 50px;
 			height: 50px;
 			border-radius: 50%;
-			font-size: 24px;
 			cursor: pointer;
 			box-shadow: 0 4px 12px rgba(255, 255, 255, 0.4);
 			transition: transform 0.3s;
+		}
+		.hamburger span {
+			display: block;
+			height: 2px;
+			width: 24px;
+			border-radius: 2px;
+			background: #000000;
+			transition: transform 0.3s;
+		}
+		.hamburger span + span {
+			margin-top: 6px;
 		}
 		.hamburger:active {
 			transform: scale(0.95);
@@ -176,14 +182,16 @@
 		} else {
 			const userData = JSON.parse(session);
 			if (userData.type !== 'admin') {
-				alert('⚠️ Acceso denegado. Esta página es solo para administradores.');
+				alert('ADVERTENCIA: Acceso denegado. Esta página es solo para administradores.');
 				window.location.href = '/login.html';
 			}
 		}
 	</script>
 	<!-- Botón Hamburguesa (solo móvil) -->
 	<button class="hamburger" onclick="toggleMobileMenu()" aria-label="Menú">
-		☰
+		<span></span>
+		<span></span>
+		<span></span>
 	</button>
 	
 	<!-- Overlay para cerrar menú en móvil -->
@@ -199,34 +207,34 @@
 			</div>
 			<ul class="menu">
 				<li class="active" onclick="showSection('dashboard'); closeMobileMenu();">
-					<span class="menu-icon">📊</span> Dashboard
+					<span class="menu-icon icon-dashboard"></span> Dashboard
 				</li>
 				<li onclick="showSection('tables'); closeMobileMenu();">
-					<span class="menu-icon">🪑</span> Mesas
+					<span class="menu-icon icon-tables"></span> Mesas
 				</li>
 				<li onclick="showSection('orders'); closeMobileMenu();">
-					<span class="menu-icon">📝</span> Pedidos
+					<span class="menu-icon icon-orders"></span> Pedidos
 				</li>
 				<li onclick="window.open('cocina.html', '_blank'); closeMobileMenu();">
-					<span class="menu-icon">👨‍🍳</span> Cocina
+					<span class="menu-icon icon-kitchen"></span> Cocina
 				</li>
 				<li onclick="showSection('menu-config'); closeMobileMenu();">
-					<span class="menu-icon">🍔</span> Menú
+					<span class="menu-icon icon-menu"></span> Menú
 				</li>
 				<li onclick="showSection('transactions'); closeMobileMenu();">
-					<span class="menu-icon">💰</span> Finanzas
+					<span class="menu-icon icon-finance"></span> Finanzas
 				</li>
 				<li onclick="showSection('close-cash'); closeMobileMenu();">
-					<span class="menu-icon">🔒</span> Cierre de Caja
+					<span class="menu-icon icon-closecash"></span> Cierre de Caja
 				</li>
 				<li onclick="showSection('profitability'); closeMobileMenu();">
-					<span class="menu-icon">📊</span> Rentabilidad
+					<span class="menu-icon icon-profitability"></span> Rentabilidad
 				</li>
 				<li onclick="showSection('system-config'); closeMobileMenu();">
-					<span class="menu-icon">⚙️</span> Configuración
+					<span class="menu-icon icon-settings"></span> Configuración
 				</li>
 				<li onclick="logout()" style="margin-top: 20px; border-top: 1px solid rgba(255,107,53,0.2); padding-top: 15px;">
-					<span class="menu-icon">🚪</span> Cerrar Sesión
+					<span class="menu-icon icon-logout"></span> Cerrar Sesión
 				</li>
 			</ul>
 		</div>
@@ -238,7 +246,7 @@
 				<div class="header">
 					<h1>Dashboard</h1>
 					<div style="display: flex; align-items: center; gap: 15px;">
-						<button class="btn" onclick="refreshData()">🔄 Actualizar</button>
+						<button class="btn" onclick="refreshData()"><span class="icon-dot icon-dot--info"></span><span>Actualizar</span></button>
 						<span style="color: #4caf50; font-size: 14px; display: flex; align-items: center; gap: 5px;">
 							<span style="width: 8px; height: 8px; background: #4caf50; border-radius: 50%; animation: pulse 2s infinite;"></span>
 							Auto-actualización activa
@@ -275,7 +283,7 @@
 			<div id="tables" class="section">
 				<div class="header">
 					<h1>Gestión de Mesas</h1>
-					<button class="btn" onclick="openTableModal()">➕ Agregar Mesa</button>
+					<button class="btn" onclick="openTableModal()"><span class="icon-dot icon-dot--success"></span><span>Agregar Mesa</span></button>
 				</div>
 				<div class="card">
 					<div class="tables-grid" id="tables-list"></div>
@@ -287,7 +295,7 @@
 				<div class="header">
 					<h1>Pedidos Activos</h1>
 					<div class="controls">
-						<button class="btn btn-success" onclick="refreshData()">🔄 Actualizar</button>
+						<button class="btn btn-success" onclick="refreshData()"><span class="icon-dot icon-dot--info"></span><span>Actualizar</span></button>
 					</div>
 				</div>
 				<div class="card" id="orders-list"></div>
@@ -297,7 +305,7 @@
 			<div id="menu-config" class="section">
 				<div class="header">
 					<h1>Configuración del Menú</h1>
-					<button class="btn" onclick="openMenuItemModal()">➕ Nuevo Producto</button>
+					<button class="btn" onclick="openMenuItemModal()"><span class="icon-dot icon-dot--success"></span><span>Nuevo Producto</span></button>
 				</div>
 				<div class="card">
 					<div class="table-scroll">
@@ -325,8 +333,69 @@
 			<div id="transactions" class="section">
 				<div class="header">
 					<h1>Historial de Transacciones</h1>
+					<div class="controls" style="display: flex; gap: 10px; flex-wrap: wrap;">
+						<button class="btn" onclick="exportFinanceCSV()"><span class="icon-dot icon-dot--info"></span><span>Exportar CSV</span></button>
+						<button class="btn btn-secondary" onclick="exportFinancePDF()"><span class="icon-dot icon-dot--secondary"></span><span>Exportar PDF</span></button>
+					</div>
 				</div>
 				<div class="card">
+					<div class="finance-filters" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px;">
+						<div>
+							<label for="finance-filter-start" style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px;">Desde</label>
+							<input type="date" id="finance-filter-start" onchange="updateFinanceFilter('startDate', this.value)" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: var(--text);">
+						</div>
+						<div>
+							<label for="finance-filter-end" style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px;">Hasta</label>
+							<input type="date" id="finance-filter-end" onchange="updateFinanceFilter('endDate', this.value)" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: var(--text);">
+						</div>
+						<div>
+							<label for="finance-filter-type" style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px;">Tipo</label>
+							<select id="finance-filter-type" onchange="updateFinanceFilter('type', this.value)" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: var(--text);">
+								<option value="all">Todos</option>
+								<option value="sale">Ventas</option>
+								<option value="income">Ingresos</option>
+								<option value="expense">Gastos</option>
+								<option value="adjustment">Ajustes</option>
+								<option value="other">Otros</option>
+							</select>
+						</div>
+						<div>
+							<label for="finance-filter-method" style="display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px;">Método de pago</label>
+							<select id="finance-filter-method" onchange="updateFinanceFilter('method', this.value)" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: var(--text);">
+								<option value="all">Todos</option>
+							</select>
+						</div>
+						<div style="display: flex; align-items: flex-end;">
+							<button class="btn btn-secondary" onclick="resetFinanceFilters()" style="width: 100%;"><span class="icon-dot icon-dot--secondary"></span><span>Limpiar filtros</span></button>
+						</div>
+					</div>
+
+					<div class="dashboard-grid" style="margin-bottom: 25px;">
+						<div class="stat-card">
+							<h3>Ingresos</h3>
+							<div class="value" id="finance-total-income">$0</div>
+							<small style="color: var(--muted); font-size: 13px;" id="finance-total-count">0 transacciones</small>
+						</div>
+						<div class="stat-card">
+							<h3>Gastos</h3>
+							<div class="value" id="finance-total-expense">$0</div>
+							<small style="color: var(--muted); font-size: 13px;">Incluye egresos y devoluciones</small>
+						</div>
+						<div class="stat-card">
+							<h3>Balance Neto</h3>
+							<div class="value" id="finance-total-net">$0</div>
+							<small style="color: var(--muted); font-size: 13px;">Ingresos - Gastos</small>
+						</div>
+					</div>
+
+					<div id="finance-period-tabs" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px;">
+						<button class="btn btn-secondary finance-tab" data-mode="daily" onclick="setFinanceViewMode('daily')"><span class="icon-dot icon-dot--info"></span><span>Diario</span></button>
+						<button class="btn btn-secondary finance-tab" data-mode="weekly" onclick="setFinanceViewMode('weekly')"><span class="icon-dot icon-dot--success"></span><span>Semanal</span></button>
+						<button class="btn btn-secondary finance-tab" data-mode="monthly" onclick="setFinanceViewMode('monthly')"><span class="icon-dot icon-dot--warning"></span><span>Mensual</span></button>
+						<button class="btn btn-secondary finance-tab" data-mode="custom" onclick="setFinanceViewMode('custom')"><span class="icon-dot icon-dot--secondary"></span><span>Personalizado</span></button>
+					</div>
+					<p id="finance-period-summary" style="color: var(--muted); font-size: 13px; margin-bottom: 20px;">Selecciona un rango para analizar flujo de caja.</p>
+
 					<div class="table-scroll">
 						<table id="transactions-table">
 							<thead>
@@ -334,6 +403,8 @@
 									<th>Fecha</th>
 									<th>Mesa</th>
 									<th>Concepto</th>
+									<th>Tipo</th>
+									<th>Método</th>
 									<th>Monto</th>
 									<th>Acciones</th>
 								</tr>
@@ -349,8 +420,8 @@
 				<div class="header">
 					<h1>Cierre de Caja</h1>
 					<div class="controls">
-						<button class="btn btn-warning" onclick="generateCloseCash()">📄 Generar Cierre Actual</button>
-						<button class="btn btn-secondary" onclick="viewClosureHistory()">📋 Historial</button>
+						<button class="btn btn-warning" onclick="generateCloseCash()"><span class="icon-dot icon-dot--warning"></span><span>Generar Cierre Actual</span></button>
+						<button class="btn btn-secondary" onclick="viewClosureHistory()"><span class="icon-dot icon-dot--secondary"></span><span>Historial</span></button>
 					</div>
 				</div>
 				<div class="card">
@@ -382,16 +453,16 @@
 			<!-- Rentabilidad -->
 			<div id="profitability" class="section">
 				<div class="header">
-					<h1>📊 Análisis de Rentabilidad</h1>
+					<h1 class="heading-with-icon"><span class="icon-dot icon-dot--info"></span><span>Análisis de Rentabilidad</span></h1>
 					<div class="controls">
-						<button class="btn" onclick="generateProfitabilityReport()">📄 Actualizar Datos</button>
-						<button class="btn btn-secondary" onclick="showDebugInfo()">🔍 Info Sistema</button>
+						<button class="btn" onclick="generateProfitabilityReport()"><span class="icon-dot icon-dot--info"></span><span>Actualizar Datos</span></button>
+						<button class="btn btn-secondary" onclick="showDebugInfo()"><span class="icon-dot icon-dot--secondary"></span><span>Info Sistema</span></button>
 					</div>
 				</div>
 
 				<div id="cost-warning" style="background: rgba(255, 152, 0, 0.1); border: 2px solid #ff9800; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: none;">
 					<div style="display: flex; align-items: center; gap: 10px;">
-						<span style="font-size: 24px;">⚠️</span>
+						<span class="icon-dot icon-dot--warning" style="width: 18px; height: 18px; box-shadow: none;"></span>
 						<div>
 							<strong style="color: #ff9800;">Algunos productos no tienen costo configurado</strong>
 							<p style="color: var(--muted); margin: 5px 0 0 0; font-size: 14px;">
@@ -404,32 +475,32 @@
 				<!-- Métricas Principales -->
 				<div class="dashboard-grid" style="margin-bottom: 30px;">
 					<div class="stat-card">
-						<h3>💰 Ganancia Hoy</h3>
+						<h3 class="heading-with-icon"><span class="icon-dot icon-dot--success"></span><span>Ganancia Hoy</span></h3>
 						<div class="value" id="profit-today">$0</div>
 						<small style="color: var(--muted); font-size: 13px;" id="profit-today-change">-</small>
 					</div>
 					<div class="stat-card">
-						<h3>📈 Ganancia Mes</h3>
+						<h3 class="heading-with-icon"><span class="icon-dot icon-dot--info"></span><span>Ganancia Mes</span></h3>
 						<div class="value" id="profit-month">$0</div>
 						<small style="color: var(--muted); font-size: 13px;" id="orders-month-count">-</small>
 					</div>
 					<div class="stat-card">
-						<h3>🎯 Margen Promedio</h3>
+						<h3 class="heading-with-icon"><span class="icon-dot icon-dot--warning"></span><span>Margen Promedio</span></h3>
 						<div class="value" id="margin-avg">0%</div>
 						<small style="color: var(--muted); font-size: 13px;">Eficiencia operativa</small>
 					</div>
 					<div class="stat-card">
-						<h3>🏆 Producto Top</h3>
+						<h3 class="heading-with-icon"><span class="icon-dot icon-dot--success"></span><span>Producto Top</span></h3>
 						<div class="value" id="most-profitable" style="font-size: 18px;">-</div>
 						<small style="color: var(--muted); font-size: 13px;" id="most-profitable-profit">-</small>
 					</div>
 					<div class="stat-card">
-						<h3>🔥 Más Vendido</h3>
+						<h3 class="heading-with-icon"><span class="icon-dot icon-dot--danger"></span><span>Más Vendido</span></h3>
 						<div class="value" id="most-sold" style="font-size: 18px;">-</div>
 						<small style="color: var(--muted); font-size: 13px;" id="most-sold-quantity">-</small>
 					</div>
 					<div class="stat-card">
-						<h3>💵 Ticket Promedio</h3>
+						<h3 class="heading-with-icon"><span class="icon-dot icon-dot--secondary"></span><span>Ticket Promedio</span></h3>
 						<div class="value" id="avg-ticket">$0</div>
 						<small style="color: var(--muted); font-size: 13px;" id="total-tickets">-</small>
 					</div>
@@ -439,13 +510,13 @@
 				<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 20px; margin-bottom: 30px;">
 					<!-- Ventas por Día (Últimos 7 días) -->
 					<div class="card">
-						<h3 style="margin-bottom: 20px;">📅 Ventas por Día (Últimos 7 días)</h3>
+						<h3 class="heading-with-icon" style="margin-bottom: 20px;"><span class="icon-dot icon-dot--info"></span><span>Ventas por Día (Últimos 7 días)</span></h3>
 						<canvas id="sales-by-day-chart" style="max-height: 300px;"></canvas>
 					</div>
 
 					<!-- Top 5 Productos Más Vendidos -->
 					<div class="card">
-						<h3 style="margin-bottom: 20px;">🏆 Top 5 Productos Más Vendidos</h3>
+						<h3 class="heading-with-icon" style="margin-bottom: 20px;"><span class="icon-dot icon-dot--success"></span><span>Top 5 Productos Más Vendidos</span></h3>
 						<canvas id="top-products-chart" style="max-height: 300px;"></canvas>
 					</div>
 				</div>
@@ -453,20 +524,20 @@
 				<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 20px; margin-bottom: 30px;">
 					<!-- Ganancias por Mes -->
 					<div class="card">
-						<h3 style="margin-bottom: 20px;">📊 Ganancias Mensuales</h3>
+						<h3 class="heading-with-icon" style="margin-bottom: 20px;"><span class="icon-dot icon-dot--warning"></span><span>Ganancias Mensuales</span></h3>
 						<canvas id="profit-by-month-chart" style="max-height: 300px;"></canvas>
 					</div>
 
 					<!-- Distribución de Ventas por Categoría -->
 					<div class="card">
-						<h3 style="margin-bottom: 20px;">🍕 Ventas por Categoría</h3>
+						<h3 class="heading-with-icon" style="margin-bottom: 20px;"><span class="icon-dot icon-dot--secondary"></span><span>Ventas por Categoría</span></h3>
 						<canvas id="category-chart" style="max-height: 300px;"></canvas>
 					</div>
 				</div>
 
 				<!-- Tabla Detallada de Rentabilidad -->
 				<div class="card">
-					<h3 style="margin-bottom: 20px;">📋 Rentabilidad Detallada por Producto</h3>
+					<h3 class="heading-with-icon" style="margin-bottom: 20px;"><span class="icon-dot icon-dot--info"></span><span>Rentabilidad Detallada por Producto</span></h3>
 					<div class="table-scroll">
 						<table id="profitability-table">
 							<thead>
@@ -492,33 +563,33 @@
 				</div>
 
 				<div class="card" style="margin-bottom: 20px;">
-					<h3 style="color: #ff4444; margin-bottom: 15px;">⚠️ Zona de Peligro</h3>
+					<h3 class="heading-with-icon" style="color: #ff4444; margin-bottom: 15px;"><span class="icon-dot icon-dot--danger"></span><span>Zona de Peligro</span></h3>
 					<p style="color: var(--muted); margin-bottom: 20px;">
 						Estas acciones son <strong>irreversibles</strong>. Úsalas con precaución.
 					</p>
 					
 					<div style="background: rgba(255, 68, 68, 0.1); border: 2px solid #ff4444; padding: 20px; border-radius: 8px;">
-						<h4 style="color: #ff4444; margin-bottom: 10px;">🗑️ Limpiar Datos de Ventas</h4>
+						<h4 class="heading-with-icon" style="color: #ff4444; margin-bottom: 10px;"><span class="icon-dot icon-dot--danger"></span><span>Limpiar Datos de Ventas</span></h4>
 						<p style="color: var(--muted); margin-bottom: 15px; font-size: 14px;">
 							Elimina todas las órdenes, transacciones y cierres de caja. <strong>NO elimina</strong> productos del menú ni meseros.
 							Útil para entregar la aplicación como nueva o resetear datos de prueba.
 						</p>
-						<ul style="color: var(--muted); margin: 15px 0; padding-left: 25px; font-size: 14px;">
-							<li>✓ Se eliminarán todas las órdenes (completadas, pendientes, canceladas)</li>
-							<li>✓ Se eliminarán todas las transacciones</li>
-							<li>✓ Se eliminarán todos los cierres de caja</li>
-							<li>✓ Las mesas volverán a estado "Disponible"</li>
-							<li>✗ Los productos del menú se mantendrán</li>
-							<li>✗ Los meseros se mantendrán</li>
+						<ul class="list-check" style="color: var(--muted); margin: 15px 0; padding-left: 0; font-size: 14px;">
+							<li><span class="list-check-indicator"></span><span>Se eliminarán todas las órdenes (completadas, pendientes, canceladas)</span></li>
+							<li><span class="list-check-indicator"></span><span>Se eliminarán todas las transacciones</span></li>
+							<li><span class="list-check-indicator"></span><span>Se eliminarán todos los cierres de caja</span></li>
+							<li><span class="list-check-indicator"></span><span>Las mesas volverán a estado "Disponible"</span></li>
+							<li><span class="list-check-indicator is-negative"></span><span>Los productos del menú se mantendrán</span></li>
+							<li><span class="list-check-indicator is-negative"></span><span>Los meseros se mantendrán</span></li>
 						</ul>
 						<button class="btn" style="background: #ff4444; border: none;" onclick="resetSalesData()">
-							🗑️ Limpiar Todos los Datos de Ventas
+							<span class="icon-dot icon-dot--danger"></span><span>Limpiar Todos los Datos de Ventas</span>
 						</button>
 					</div>
 				</div>
 
 				<div class="card">
-					<h3 style="margin-bottom: 15px;">ℹ️ Información del Sistema</h3>
+					<h3 class="heading-with-icon" style="margin-bottom: 15px;"><span class="icon-dot icon-dot--info"></span><span>Información del Sistema</span></h3>
 					<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
 						<div style="background: var(--panel); padding: 15px; border-radius: 8px;">
 							<div style="color: var(--muted); font-size: 13px;">Productos en Menú</div>
@@ -547,7 +618,7 @@
 		<div class="panel">
 			<div class="modal-header">
 				<h3 id="table-modal-title">Nueva Mesa</h3>
-				<button class="modal-close" onclick="closeTableModal()">✕</button>
+				<button class="modal-close" onclick="closeTableModal()" aria-label="Cerrar">X</button>
 			</div>
 			<div class="form-row">
 				<div class="form-group" style="flex: 1;">
@@ -560,7 +631,7 @@
 				</div>
 			</div>
 			<div class="controls">
-				<button class="btn" onclick="saveTable()">💾 Guardar</button>
+				<button class="btn" onclick="saveTable()"><span class="icon-dot icon-dot--success"></span><span>Guardar</span></button>
 				<button class="btn btn-secondary" onclick="closeTableModal()">Cancelar</button>
 			</div>
 		</div>
@@ -571,7 +642,7 @@
 		<div class="panel">
 			<div class="modal-header">
 				<h3 id="menu-item-modal-title">Nuevo Producto</h3>
-				<button class="modal-close" onclick="closeMenuItemModal()">✕</button>
+				<button class="modal-close" onclick="closeMenuItemModal()" aria-label="Cerrar">X</button>
 			</div>
 			<div class="form-group">
 				<label>Nombre</label>
@@ -620,7 +691,7 @@
 				</label>
 			</div>
 			<div class="controls">
-				<button class="btn" onclick="saveMenuItem()">💾 Guardar</button>
+				<button class="btn" onclick="saveMenuItem()"><span class="icon-dot icon-dot--success"></span><span>Guardar</span></button>
 				<button class="btn btn-secondary" onclick="closeMenuItemModal()">Cancelar</button>
 			</div>
 		</div>
@@ -631,7 +702,7 @@
 		<div class="panel">
 			<div class="modal-header">
 				<h3 id="table-detail-title">Detalle Mesa</h3>
-				<button class="modal-close" onclick="closeTableDetailModal()">✕</button>
+				<button class="modal-close" onclick="closeTableDetailModal()" aria-label="Cerrar">X</button>
 			</div>
 			<div id="table-detail-content"></div>
 		</div>
@@ -642,19 +713,19 @@
 		<div class="panel" style="max-width: 1200px;">
 			<div class="modal-header">
 				<h3 id="order-modal-title">Nuevo Pedido</h3>
-				<button class="modal-close" onclick="closeOrderModal()">✕</button>
+				<button class="modal-close" onclick="closeOrderModal()" aria-label="Cerrar">X</button>
 			</div>
 			
 			<div style="display: grid; grid-template-columns: 1fr 400px; gap: 20px;">
 				<!-- Menú de productos -->
 				<div style="max-height: 500px; overflow-y: auto; padding-right: 10px;">
-					<h4 style="color: var(--accent); margin-bottom: 15px;">🍔 Seleccionar Productos</h4>
+					<h4 class="heading-with-icon" style="color: var(--accent); margin-bottom: 15px;"><span class="icon-dot icon-dot--info"></span><span>Seleccionar Productos</span></h4>
 					<div id="order-menu-items"></div>
 				</div>
 				
 				<!-- Resumen del pedido -->
 				<div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1);">
-					<h4 style="color: var(--accent); margin-bottom: 15px;">📝 Pedido Actual</h4>
+					<h4 class="heading-with-icon" style="color: var(--accent); margin-bottom: 15px;"><span class="icon-dot icon-dot--info"></span><span>Pedido Actual</span></h4>
 					<div id="order-items-summary" style="max-height: 300px; overflow-y: auto; margin-bottom: 15px;"></div>
 					
 					<div style="background: linear-gradient(135deg, #ffffff, #e0e0e0); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
@@ -663,7 +734,7 @@
 					</div>
 					
 					<div style="display: flex; flex-direction: column; gap: 10px;">
-						<button class="btn" onclick="saveOrderFromModal()" style="width: 100%;">💾 Guardar Pedido</button>
+						<button class="btn" onclick="saveOrderFromModal()" style="width: 100%;"><span class="icon-dot icon-dot--success"></span><span>Guardar Pedido</span></button>
 						<button class="btn btn-secondary" onclick="closeOrderModal()" style="width: 100%;">Cancelar</button>
 					</div>
 				</div>
@@ -677,10 +748,28 @@
 		let currentEditingMenuItem = null;
 		let autoRefreshInterval = null;
 		let isRefreshing = false;
+		const financeFilters = {
+			startDate: '',
+			endDate: '',
+			type: 'all',
+			method: 'all'
+		};
+		let financeViewMode = 'daily';
+
+		function renderStatusPill(status) {
+			const map = {
+				available: { pill: 'status-available', dot: 'icon-dot--success', label: 'Disponible' },
+				occupied: { pill: 'status-occupied', dot: 'icon-dot--danger', label: 'Ocupada' },
+				reserved: { pill: 'status-reserved', dot: 'icon-dot--warning', label: 'Reservada' }
+			};
+			const config = map[status] || { pill: 'status-tag', dot: 'icon-dot--secondary', label: status };
+			return `<span class="status-pill ${config.pill}"><span class="icon-dot ${config.dot}"></span><span>${config.label}</span></span>`;
+		}
 
 		async function init() {
 			await loadInitialData();
 			await initializeDefaultData();
+			setFinanceViewMode('daily', { skipRender: true });
 			renderDashboard();
 			renderAllSections();
 			startAutoRefresh();
@@ -707,7 +796,7 @@
 							if (sectionId === 'dashboard') renderDashboard();
 							if (sectionId === 'tables') renderTables();
 							if (sectionId === 'orders') renderOrders();
-							if (sectionId === 'transactions') renderTransactions();
+							if (sectionId === 'transactions') renderFinance();
 						}
 						
 						// Actualizar badge de notificaciones si hay pedidos nuevos
@@ -805,7 +894,7 @@
 			
 			notifDiv.innerHTML = `
 				<div style="display: flex; align-items: center; gap: 15px;">
-					<span style="font-size: 40px;">✅</span>
+					<span class="icon-dot icon-dot--success" style="width: 18px; height: 18px; box-shadow: none;"></span>
 					<div>
 						<div style="font-size: 18px; margin-bottom: 5px;">¡Pedido Listo!</div>
 						<div style="font-size: 14px; opacity: 0.9;">Mesa ${notification.tableNumber}</div>
@@ -900,7 +989,7 @@
 			if (sectionId === 'tables') renderTables();
 			if (sectionId === 'orders') renderOrders();
 			if (sectionId === 'menu-config') renderMenuConfig();
-			if (sectionId === 'transactions') renderTransactions();
+			if (sectionId === 'transactions') renderFinance();
 			if (sectionId === 'profitability') renderProfitability();
 			if (sectionId === 'system-config') updateSystemInfo();
 		}
@@ -908,18 +997,18 @@
 		async function refreshData() {
 			const btn = event.target;
 			btn.disabled = true;
-			btn.textContent = '⏳ Actualizando...';
+			btn.textContent = 'Actualizando...';
 			
 			await loadInitialData();
 			renderAllSections();
 			
 			btn.disabled = false;
-			btn.innerHTML = '🔄 Actualizar';
+			btn.innerHTML = '<span class="icon-dot icon-dot--info"></span><span>Actualizar</span>';
 			
 			// Mostrar notificación temporal
 			const notification = document.createElement('div');
 			notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #ffffff; color: #000000; padding: 15px 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(255,255,255,0.3); z-index: 9999; animation: slideIn 0.3s ease;';
-			notification.textContent = '✅ Datos actualizados';
+			notification.textContent = 'Datos actualizados';
 			document.body.appendChild(notification);
 			
 			setTimeout(() => {
@@ -933,7 +1022,416 @@
 			renderTables();
 			renderOrders();
 			renderMenuConfig();
-			renderTransactions();
+			renderFinance();
+		}
+
+		// === FINANZAS ===
+		function formatDateInput(date) {
+			if (!date) return '';
+			const year = date.getFullYear();
+			const month = String(date.getMonth() + 1).padStart(2, '0');
+			const day = String(date.getDate()).padStart(2, '0');
+			return `${year}-${month}-${day}`;
+		}
+
+		function parseDateInput(value, endOfDay = false) {
+			if (!value) return null;
+			const [year, month, day] = value.split('-').map(Number);
+			if (!year || !month || !day) return null;
+			const date = new Date(year, month - 1, day);
+			if (isNaN(date.getTime())) return null;
+			if (endOfDay) {
+				date.setHours(23, 59, 59, 999);
+			} else {
+				date.setHours(0, 0, 0, 0);
+			}
+			return date;
+		}
+
+		function formatDateForDisplay(value) {
+			if (!value) return '';
+			const date = new Date(value);
+			if (isNaN(date.getTime())) return value;
+			return new Intl.DateTimeFormat('es-MX', {
+				year: 'numeric',
+				month: '2-digit',
+				day: '2-digit'
+			}).format(date);
+		}
+
+		function getTransactionSignedAmount(transaction) {
+			const raw = Number(transaction?.amount);
+			if (!isFinite(raw)) return 0;
+			const type = (transaction?.type || 'sale').toLowerCase();
+			if (['expense', 'refund', 'payout', 'cost'].includes(type)) {
+				return raw > 0 ? -raw : raw;
+			}
+			return raw;
+		}
+
+		function formatTransactionType(type) {
+			const normalized = (type || 'sale').toLowerCase();
+			switch (normalized) {
+				case 'sale':
+					return 'Venta';
+				case 'income':
+					return 'Ingreso';
+				case 'expense':
+					return 'Gasto';
+				case 'adjustment':
+					return 'Ajuste';
+				case 'refund':
+					return 'Devolución';
+				default:
+					return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+			}
+		}
+
+		function collectFinanceMethodMap() {
+			const methodMap = new Map();
+			AppState.transactions.forEach(transaction => {
+				const raw = transaction?.paymentMethod;
+				const label = raw && String(raw).trim() ? String(raw).trim() : 'Sin método';
+				const key = label.toLowerCase();
+				if (!methodMap.has(key)) {
+					methodMap.set(key, label);
+				}
+			});
+			return methodMap;
+		}
+
+		function getFinanceMethodLabel(key) {
+			if (!key || key === 'all') return 'todos los métodos';
+			const label = collectFinanceMethodMap().get(key);
+			return label || key;
+		}
+
+		function populateFinanceMethodOptions() {
+			const select = document.getElementById('finance-filter-method');
+			if (!select) return;
+			const methodMap = collectFinanceMethodMap();
+			const options = ['<option value="all">Todos</option>'];
+			methodMap.forEach((label, key) => {
+				options.push(`<option value="${key}">${label}</option>`);
+			});
+			select.innerHTML = options.join('');
+			if (financeFilters.method !== 'all' && !methodMap.has(financeFilters.method)) {
+				financeFilters.method = 'all';
+			}
+			select.value = financeFilters.method;
+		}
+
+		function syncFinanceFilterInputs() {
+			const startInput = document.getElementById('finance-filter-start');
+			if (startInput && startInput.value !== financeFilters.startDate) {
+				startInput.value = financeFilters.startDate;
+			}
+			const endInput = document.getElementById('finance-filter-end');
+			if (endInput && endInput.value !== financeFilters.endDate) {
+				endInput.value = financeFilters.endDate;
+			}
+			const typeSelect = document.getElementById('finance-filter-type');
+			if (typeSelect && typeSelect.value !== financeFilters.type) {
+				typeSelect.value = financeFilters.type;
+			}
+			const methodSelect = document.getElementById('finance-filter-method');
+			if (methodSelect && methodSelect.value !== financeFilters.method) {
+				methodSelect.value = financeFilters.method;
+			}
+		}
+
+		function syncFinanceViewModeButtons() {
+			document.querySelectorAll('#finance-period-tabs .finance-tab').forEach(button => {
+				const mode = button.dataset.mode;
+				const isActive = mode === financeViewMode;
+				button.classList.toggle('btn-warning', isActive);
+				button.classList.toggle('btn-secondary', !isActive);
+			});
+		}
+
+		function getFilteredTransactions() {
+			const start = parseDateInput(financeFilters.startDate);
+			const end = parseDateInput(financeFilters.endDate, true);
+			const typeFilter = (financeFilters.type || 'all').toLowerCase();
+			const methodFilter = financeFilters.method || 'all';
+			return AppState.transactions
+				.filter(transaction => {
+					if (!transaction?.date) return false;
+					const date = new Date(transaction.date);
+					if (isNaN(date.getTime())) return false;
+					if (start && date < start) return false;
+					if (end && date > end) return false;
+					const normalizedType = (transaction.type || 'sale').toLowerCase();
+					if (typeFilter !== 'all') {
+						if (typeFilter === 'other') {
+							if (['sale', 'income', 'expense', 'adjustment'].includes(normalizedType)) {
+								return false;
+							}
+						} else if (normalizedType !== typeFilter) {
+							return false;
+						}
+					}
+					const methodLabel = transaction.paymentMethod && String(transaction.paymentMethod).trim()
+						? String(transaction.paymentMethod).trim().toLowerCase()
+						: 'sin método';
+					if (methodFilter !== 'all' && methodLabel !== methodFilter) {
+						return false;
+					}
+					return true;
+				})
+				.sort((a, b) => new Date(b.date) - new Date(a.date));
+		}
+
+		function calculateFinanceTotals(transactions) {
+			return transactions.reduce((acc, transaction) => {
+				const amount = getTransactionSignedAmount(transaction);
+				if (amount >= 0) {
+					acc.income += amount;
+				} else {
+					acc.expense += Math.abs(amount);
+				}
+				acc.net += amount;
+				return acc;
+			}, { income: 0, expense: 0, net: 0 });
+		}
+
+		function getTypeFilterLabel(type) {
+			switch (type) {
+				case 'sale':
+					return 'solo ventas';
+				case 'income':
+					return 'solo ingresos';
+				case 'expense':
+					return 'solo gastos';
+				case 'adjustment':
+					return 'solo ajustes';
+				case 'other':
+					return 'otros movimientos';
+				default:
+					return 'todos los tipos';
+			}
+		}
+
+		function renderFinanceSummary(transactions) {
+			const totals = calculateFinanceTotals(transactions);
+			const incomeEl = document.getElementById('finance-total-income');
+			if (incomeEl) incomeEl.textContent = Utils.formatCurrency(totals.income);
+			const expenseEl = document.getElementById('finance-total-expense');
+			if (expenseEl) expenseEl.textContent = Utils.formatCurrency(totals.expense * -1);
+			const netEl = document.getElementById('finance-total-net');
+			if (netEl) netEl.textContent = Utils.formatCurrency(totals.net);
+			const countEl = document.getElementById('finance-total-count');
+			if (countEl) countEl.textContent = `${transactions.length} transacciones`;
+			const summaryEl = document.getElementById('finance-period-summary');
+			if (summaryEl) {
+				let rangeText = 'todo el historial';
+				if (financeFilters.startDate && financeFilters.endDate) {
+					const startTxt = formatDateForDisplay(financeFilters.startDate);
+					const endTxt = formatDateForDisplay(financeFilters.endDate);
+					rangeText = startTxt === endTxt ? startTxt : `${startTxt} - ${endTxt}`;
+				} else if (financeFilters.startDate) {
+					rangeText = `desde ${formatDateForDisplay(financeFilters.startDate)}`;
+				} else if (financeFilters.endDate) {
+					rangeText = `hasta ${formatDateForDisplay(financeFilters.endDate)}`;
+				}
+				const modeLabel = {
+					daily: 'diaria',
+					weekly: 'semanal',
+					monthly: 'mensual',
+					custom: 'personalizada'
+				}[financeViewMode] || 'personalizada';
+				const typeLabel = getTypeFilterLabel(financeFilters.type);
+				const methodLabel = getFinanceMethodLabel(financeFilters.method);
+				summaryEl.textContent = `Vista ${modeLabel}: ${transactions.length} transacciones (${typeLabel}, ${methodLabel}) en ${rangeText}.`;
+			}
+		}
+
+		function truncateText(text, maxLength = 40) {
+			if (!text) return '';
+			const normalized = String(text);
+			return normalized.length <= maxLength ? normalized : `${normalized.slice(0, maxLength - 3)}...`;
+		}
+
+		function renderTransactionsTable(transactions) {
+			const tbody = document.querySelector('#transactions-table tbody');
+			if (!tbody) return;
+			if (!transactions || transactions.length === 0) {
+				tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="color: var(--muted); padding: 40px;">No hay transacciones para el rango seleccionado</td></tr>';
+				return;
+			}
+			tbody.innerHTML = transactions.map(transaction => {
+				const amount = getTransactionSignedAmount(transaction);
+				const amountStyle = amount < 0 ? 'color: #ff5252;' : 'color: var(--success);';
+				const tableLabel = transaction.tableNumber ? `Mesa ${transaction.tableNumber}` : '-';
+				const methodLabel = transaction.paymentMethod && String(transaction.paymentMethod).trim()
+					? String(transaction.paymentMethod).trim()
+					: 'Sin método';
+				return `
+					<tr>
+						<td>${Utils.formatDate(transaction.date)}</td>
+						<td>${tableLabel}</td>
+						<td>${truncateText(transaction.concept || '-')}</td>
+						<td>${formatTransactionType(transaction.type)}</td>
+						<td>${methodLabel}</td>
+						<td style="font-weight: 600; ${amountStyle}">${Utils.formatCurrency(amount)}</td>
+						<td>
+							<button class="btn btn-small btn-danger" onclick="deleteTransaction('${transaction.id}')"><span class="icon-dot icon-dot--danger"></span><span>Eliminar</span></button>
+						</td>
+					</tr>
+				`;
+			}).join('');
+		}
+
+		function renderFinance() {
+			populateFinanceMethodOptions();
+			syncFinanceFilterInputs();
+			syncFinanceViewModeButtons();
+			const transactions = getFilteredTransactions();
+			renderFinanceSummary(transactions);
+			renderTransactionsTable(transactions);
+		}
+
+		function setFinanceViewMode(mode, options = {}) {
+			financeViewMode = mode;
+			const today = new Date();
+			if (mode === 'daily') {
+				const formatted = formatDateInput(today);
+				financeFilters.startDate = formatted;
+				financeFilters.endDate = formatted;
+			} else if (mode === 'weekly') {
+				const start = new Date(today);
+				start.setDate(start.getDate() - 6);
+				financeFilters.startDate = formatDateInput(start);
+				financeFilters.endDate = formatDateInput(today);
+			} else if (mode === 'monthly') {
+				const start = new Date(today.getFullYear(), today.getMonth(), 1);
+				financeFilters.startDate = formatDateInput(start);
+				financeFilters.endDate = formatDateInput(today);
+			} else if (mode === 'custom') {
+				// Mantener fechas actuales
+			}
+			if (!options.skipRender) {
+				renderFinance();
+			} else {
+				syncFinanceFilterInputs();
+				syncFinanceViewModeButtons();
+			}
+		}
+
+		function updateFinanceFilter(field, value) {
+			if (field === 'startDate' || field === 'endDate') {
+				financeViewMode = 'custom';
+			}
+			financeFilters[field] = value || '';
+			if (field === 'startDate' || field === 'endDate') {
+				const start = parseDateInput(financeFilters.startDate);
+				const end = parseDateInput(financeFilters.endDate);
+				if (start && end && start > end) {
+					if (field === 'startDate') {
+						financeFilters.endDate = financeFilters.startDate;
+					} else {
+						financeFilters.startDate = financeFilters.endDate;
+					}
+				}
+			}
+			renderFinance();
+		}
+
+		function resetFinanceFilters() {
+			financeFilters.type = 'all';
+			financeFilters.method = 'all';
+			const typeSelect = document.getElementById('finance-filter-type');
+			if (typeSelect) typeSelect.value = 'all';
+			const methodSelect = document.getElementById('finance-filter-method');
+			if (methodSelect) methodSelect.value = 'all';
+			setFinanceViewMode('daily');
+		}
+
+		function formatCSVValue(value) {
+			if (value === null || value === undefined) return '';
+			if (typeof value === 'number') return value.toString();
+			const text = String(value).replace(/"/g, '""');
+			return /[";\n]/.test(text) ? `"${text}"` : text;
+		}
+
+		function exportFinanceCSV() {
+			const transactions = getFilteredTransactions();
+			if (transactions.length === 0) {
+				alert('No hay transacciones para exportar.');
+				return;
+			}
+			const headers = ['Fecha', 'Mesa', 'Concepto', 'Tipo', 'Método', 'Monto'];
+			const rows = transactions.map(transaction => {
+				const amount = getTransactionSignedAmount(transaction);
+				return [
+					Utils.formatDate(transaction.date),
+					transaction.tableNumber ? `Mesa ${transaction.tableNumber}` : '-',
+					transaction.concept || '-',
+					formatTransactionType(transaction.type),
+					transaction.paymentMethod && String(transaction.paymentMethod).trim() ? String(transaction.paymentMethod).trim() : 'Sin método',
+					Math.round(amount * 100) / 100
+				];
+			});
+			const csvContent = [headers, ...rows]
+				.map(row => row.map(formatCSVValue).join(';'))
+				.join('\n');
+			const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+			const url = URL.createObjectURL(blob);
+			const link = document.createElement('a');
+			link.href = url;
+			link.download = `transacciones-${Utils.getDateKey()}.csv`;
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+			URL.revokeObjectURL(url);
+		}
+
+		function exportFinancePDF() {
+			const transactions = getFilteredTransactions();
+			if (transactions.length === 0) {
+				alert('No hay transacciones para exportar.');
+				return;
+			}
+			const totals = calculateFinanceTotals(transactions);
+			const { jsPDF } = window.jspdf;
+			const doc = new jsPDF();
+			doc.setFontSize(18);
+			doc.text('Historial de Transacciones', 105, 20, { align: 'center' });
+			doc.setFontSize(10);
+			doc.text(`Generado: ${new Date().toLocaleString('es-MX')}`, 105, 28, { align: 'center' });
+			doc.text(`Rango: ${document.getElementById('finance-period-summary')?.textContent || ''}`, 105, 34, { align: 'center' });
+			doc.setLineWidth(0.5);
+			doc.line(20, 38, 190, 38);
+			doc.setFontSize(10);
+			doc.text(`Ingresos: ${Utils.formatCurrency(totals.income)}`, 20, 47);
+			doc.text(`Gastos: ${Utils.formatCurrency(totals.expense * -1)}`, 20, 53);
+			doc.text(`Balance: ${Utils.formatCurrency(totals.net)}`, 20, 59);
+			doc.text(`Total transacciones: ${transactions.length}`, 20, 65);
+			let y = 75;
+			doc.setFontSize(9);
+			doc.text('Fecha', 20, y);
+			doc.text('Mesa', 55, y);
+			doc.text('Concepto', 75, y);
+			doc.text('Tipo', 130, y);
+			doc.text('Método', 150, y);
+			doc.text('Monto', 190, y, { align: 'right' });
+			y += 6;
+			transactions.forEach(transaction => {
+				if (y > 270) {
+					doc.addPage();
+					y = 20;
+				}
+				doc.text(Utils.formatDate(transaction.date), 20, y);
+				doc.text(transaction.tableNumber ? `Mesa ${transaction.tableNumber}` : '-', 55, y);
+				doc.text(truncateText(transaction.concept || '-', 40), 75, y);
+				doc.text(formatTransactionType(transaction.type), 130, y);
+				doc.text(transaction.paymentMethod && String(transaction.paymentMethod).trim() ? String(transaction.paymentMethod).trim() : 'Sin método', 150, y);
+				doc.text(Utils.formatCurrency(getTransactionSignedAmount(transaction)), 190, y, { align: 'right' });
+				y += 6;
+			});
+			const pdfBlob = doc.output('blob');
+			const pdfUrl = URL.createObjectURL(pdfBlob);
+			window.open(pdfUrl, '_blank');
 		}
 
 		// DASHBOARD
@@ -942,15 +1440,15 @@
 			const activeOrders = AppState.orders.filter(o => o.status === 'pending').length;
 			
 			// Calcular ventas basándose en órdenes completadas (igual que rentabilidad)
-			const today = new Date().toISOString().split('T')[0];
-			const thisMonth = new Date().toISOString().slice(0, 7);
+			const today = Utils.getDateKey();
+			const thisMonth = Utils.getMonthKey();
 			
 			let todaySales = 0;
 			let monthSales = 0;
 			
 			AppState.orders.filter(o => o.status === 'completed').forEach(order => {
-				const orderDate = order.completedAt ? order.completedAt.split('T')[0] : '';
-				const orderMonth = order.completedAt ? order.completedAt.slice(0, 7) : '';
+				const orderDate = Utils.getDateKeyFromISO(order.completedAt);
+				const orderMonth = Utils.getMonthKeyFromISO(order.completedAt);
 				
 				let orderTotal = 0;
 				order.items.forEach(item => {
@@ -973,18 +1471,17 @@
 					<div class="table-card ${table.status}">
 						<div class="table-number">Mesa ${table.number}</div>
 						<div class="table-status">
-							${table.status === 'available' ? '✅ Disponible' : 
-							  table.status === 'occupied' ? '🔴 Ocupada' : '📝 Reservada'}
+							${renderStatusPill(table.status)}
 						</div>
 						${order ? `<div class="badge badge-warning" style="margin-top: 8px; font-size: 11px;">
 							${order.items.length} productos | ${Utils.formatCurrency(order.total)}
 						</div>` : ''}
 						<div style="margin-top: 12px; display: flex; gap: 5px; flex-direction: column;">
 							${table.status === 'available' ? 
-								`<button class="btn btn-small" onclick="event.stopPropagation(); openOrderModal('${table.id}')" style="width: 100%;">📝 Tomar Pedido</button>` : ''}
+								`<button class="btn btn-small" onclick="event.stopPropagation(); openOrderModal('${table.id}')" style="width: 100%;"><span class="icon-dot icon-dot--info"></span><span>Tomar Pedido</span></button>` : ''}
 							${table.status === 'occupied' ? 
-								`<button class="btn btn-small btn-warning" onclick="event.stopPropagation(); viewTableDetails('${table.id}')" style="width: 100%;">👁️ Ver Pedido</button>
-								<button class="btn btn-small" onclick="event.stopPropagation(); openOrderModal('${table.id}')" style="width: 100%;">➕ Añadir Items</button>` : ''}
+								`<button class="btn btn-small btn-warning" onclick="event.stopPropagation(); viewTableDetails('${table.id}')" style="width: 100%;"><span class="icon-dot icon-dot--warning"></span><span>Ver Pedido</span></button>
+							<button class="btn btn-small" onclick="event.stopPropagation(); openOrderModal('${table.id}')" style="width: 100%;"><span class="icon-dot icon-dot--success"></span><span>Añadir Items</span></button>` : ''}
 						</div>
 					</div>
 				`;
@@ -1000,24 +1497,23 @@
 				return `
 					<div class="table-card ${table.status}" style="${isTakeaway ? 'border-left: 4px solid #ff9800;' : ''}">
 						<div class="table-number">
-							${isTakeaway ? '🛍️ ' : ''}${table.number}
-							${isTakeaway ? '<span style="display: block; font-size: 12px; color: #ff9800; margin-top: 4px;">Para Llevar</span>' : ''}
+							${isTakeaway ? '<span class="status-pill status-tag"><span class="icon-dot icon-dot--warning"></span><span>Para Llevar</span></span>' : ''}
+							<span class="table-number-label">Mesa ${table.number}</span>
 						</div>
 						${!isTakeaway ? `<div class="table-status">Capacidad: ${table.capacity} personas</div>` : ''}
 						<div class="table-status">
-							${table.status === 'available' ? '✅ Disponible' : 
-							  table.status === 'occupied' ? '🔴 Ocupada' : '📝 Reservada'}
+							${renderStatusPill(table.status)}
 						</div>
 						${order ? `<div class="badge badge-info" style="margin-top: 8px; font-size: 11px;">
 							${order.items.length} productos | ${Utils.formatCurrency(order.total)}
 						</div>` : ''}
 						<div style="margin-top: 10px; display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">
 							${table.status === 'occupied' ? 
-								`<button class="btn btn-small btn-warning" onclick="viewTableDetails('${table.id}')">👁️ Ver</button>` : ''}
-							${!isTakeaway ? `<button class="btn btn-small btn-secondary" onclick="editTable('${table.id}')">✏️</button>` : ''}
-							${!isTakeaway ? `<button class="btn btn-small btn-danger" onclick="deleteTable('${table.id}')">🗑️</button>` : ''}
+								`<button class="btn btn-small btn-warning" onclick="viewTableDetails('${table.id}')"><span class="icon-dot icon-dot--warning"></span><span>Ver</span></button>` : ''}
+							${!isTakeaway ? `<button class="btn btn-small btn-secondary" onclick="editTable('${table.id}')"><span class="icon-dot icon-dot--secondary"></span><span>Editar</span></button>` : ''}
+							${!isTakeaway ? `<button class="btn btn-small btn-danger" onclick="deleteTable('${table.id}')"><span class="icon-dot icon-dot--danger"></span><span>Eliminar</span></button>` : ''}
 							${table.status === 'occupied' ? 
-								`<button class="btn btn-small btn-success" onclick="freeTable('${table.id}')">✓ Liberar</button>` : ''}
+								`<button class="btn btn-small btn-success" onclick="freeTable('${table.id}')"><span class="icon-dot icon-dot--success"></span><span>Liberar</span></button>` : ''}
 						</div>
 					</div>
 				`;
@@ -1134,8 +1630,8 @@
 						Total: ${Utils.formatCurrency(order.total)}
 					</div>
 					<div style="margin-top: 15px; display: flex; gap: 10px;">
-						<button class="btn btn-success" onclick="completeOrder('${order.id}')">✓ Completar y Facturar</button>
-						<button class="btn btn-danger" onclick="cancelOrder('${order.id}')">✕ Cancelar</button>
+						<button class="btn btn-success" onclick="completeOrder('${order.id}')"><span class="icon-dot icon-dot--success"></span><span>Completar y Facturar</span></button>
+						<button class="btn btn-danger" onclick="cancelOrder('${order.id}')"><span class="icon-dot icon-dot--danger"></span><span>Cancelar</span></button>
 					</div>
 				</div>
 			`).join('');
@@ -1209,7 +1705,7 @@
 				renderOrders();
 				renderDashboard();
 				renderTables();
-				renderTransactions();
+				renderFinance();
 				generateProfitabilityReport();
 
 			} catch (error) {
@@ -1221,7 +1717,8 @@
 					renderOrders();
 					renderDashboard();
 					renderTables();
-					renderTransactions();
+					renderFinance();
+					renderFinance();
 				} catch (loadError) {
 					console.error('No se pudo recargar datos:', loadError);
 				}
@@ -1279,6 +1776,7 @@
 			renderOrders();
 			renderDashboard();
 			renderTables();
+			renderFinance();
 
 		} catch (error) {
 			console.error('Error cancelando orden:', error);
@@ -1328,14 +1826,15 @@
 							<button 
 								class="btn btn-small" 
 								onclick="toggleProductAvailability('${item.id}')" 
-								style="background: ${item.available ? '#4caf50' : '#666'}; color: #fff; border: none; padding: 6px 14px; font-size: 12px; min-width: 90px;"
+								style="background: ${item.available ? '#1f2937' : '#3f3f46'}; border: 1px solid rgba(255,255,255,0.1); padding: 6px 14px; font-size: 12px; min-width: 120px; color: #fff;"
 								title="${item.available ? 'Click para ocultar del menú' : 'Click para mostrar en el menú'}">
-								${item.available ? '👁️ Visible' : '🚫 Oculto'}
+								<span class="icon-dot ${item.available ? 'icon-dot--success' : 'icon-dot--secondary'}"></span>
+								<span>${item.available ? 'Visible en menú' : 'Oculto'}</span>
 							</button>
 						</td>
 						<td>
-							<button class="btn btn-small btn-secondary" onclick="editMenuItem('${item.id}')" title="Editar producto">✏️</button>
-							<button class="btn btn-small btn-danger" onclick="deleteMenuItem('${item.id}')" title="Eliminar producto">🗑️</button>
+							<button class="btn btn-small btn-secondary" onclick="editMenuItem('${item.id}')" title="Editar producto"><span class="icon-dot icon-dot--secondary"></span><span>Editar</span></button>
+							<button class="btn btn-small btn-danger" onclick="deleteMenuItem('${item.id}')" title="Eliminar producto"><span class="icon-dot icon-dot--danger"></span><span>Eliminar</span></button>
 						</td>
 					</tr>
 				`;
@@ -1405,7 +1904,7 @@
 			document.getElementById('item-image-preview').innerHTML = `
 				<div style="position: relative; display: inline-block;">
 					<img src="${imageUrl}" style="max-width: 200px; max-height: 150px; border-radius: 8px; border: 2px solid var(--accent);">
-					<button onclick="clearImagePreview()" style="position: absolute; top: 5px; right: 5px; background: var(--danger); color: #fff; border: 0; border-radius: 50%; width: 25px; height: 25px; cursor: pointer;">✕</button>
+					<button onclick="clearImagePreview()" style="position: absolute; top: 5px; right: 5px; background: var(--danger); color: #fff; border: 0; border-radius: 50%; width: 25px; height: 25px; cursor: pointer;">X</button>
 				</div>
 			`;
 		}
@@ -1499,40 +1998,15 @@
 				// Revertir cambio si falla
 				item.available = !item.available;
 				renderMenuConfig();
-				alert('⚠️ Error al actualizar. Intenta de nuevo.');
+				alert('Error al actualizar. Intenta de nuevo.');
 			});
-		}
-
-		// TRANSACCIONES
-		function renderTransactions() {
-			const tbody = document.querySelector('#transactions-table tbody');
-			const sorted = [...AppState.transactions].sort((a, b) => 
-				new Date(b.date) - new Date(a.date)
-			);
-			
-			if (sorted.length === 0) {
-				tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="color: var(--muted); padding: 40px;">No hay transacciones registradas</td></tr>';
-				return;
-			}
-
-			tbody.innerHTML = sorted.map(t => `
-				<tr>
-					<td>${Utils.formatDate(t.date)}</td>
-					<td>Mesa ${t.tableNumber || '-'}</td>
-					<td>${t.concept}</td>
-					<td style="color: var(--success); font-weight: 600;">${Utils.formatCurrency(t.amount)}</td>
-					<td>
-						<button class="btn btn-small btn-danger" onclick="deleteTransaction('${t.id}')">🗑️</button>
-					</td>
-				</tr>
-			`).join('');
 		}
 
 		async function deleteTransaction(transactionId) {
 			if (!confirm('¿Eliminar esta transacción?')) return;
 			AppState.transactions = AppState.transactions.filter(t => t.id !== transactionId);
 			await API.save('transactions', AppState.transactions);
-			renderTransactions();
+			renderFinance();
 			renderDashboard();
 			Utils.showNotification('Transacción eliminada', 'success');
 		}
@@ -1627,7 +2101,7 @@
 				<div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--accent);">
 					<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
 						<strong>${item.name}</strong>
-						<button class="btn btn-small btn-danger" onclick="removeItemFromOrder(${index})" style="padding: 4px 8px;">🗑️</button>
+						<button class="btn btn-small btn-danger" onclick="removeItemFromOrder(${index})" style="padding: 4px 8px;"><span class="icon-dot icon-dot--danger"></span><span>Quitar</span></button>
 					</div>
 					<div style="display: flex; gap: 10px; align-items: center;">
 						<button onclick="changeQuantity(${index}, -1)" style="width: 30px; height: 30px; border-radius: 50%; border: 0; background: #ffffff; color: #000000; cursor: pointer; font-size: 18px;">-</button>
@@ -1671,7 +2145,7 @@
 		}
 		
 		if (!currentOrderTable || currentOrderItems.length === 0) {
-			alert('⚠️ Agrega al menos un producto');
+			alert('Agrega al menos un producto');
 			return;
 		}
 
@@ -1790,8 +2264,8 @@
 					</div>
 					
 					<div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
-						<button class="btn btn-warning" onclick="generateInvoicePDFFromModal('${order.id}')">📄 Generar PDF</button>
-						<button class="btn btn-success" onclick="completeOrderFromModal('${order.id}')">✓ Completar y Facturar</button>
+						<button class="btn btn-warning" onclick="generateInvoicePDFFromModal('${order.id}')"><span class="icon-dot icon-dot--warning"></span><span>Generar PDF</span></button>
+						<button class="btn btn-success" onclick="completeOrderFromModal('${order.id}')"><span class="icon-dot icon-dot--success"></span><span>Completar y Facturar</span></button>
 						<button class="btn btn-secondary" onclick="closeTableDetailModal()">Cerrar</button>
 					</div>
 				</div>
@@ -1819,13 +2293,13 @@
 
 		// CIERRE DE CAJA
 		async function generateCloseCash() {
-			const today = new Date().toISOString().split('T')[0];
-			const todayTransactions = AppState.transactions.filter(t => t.date && t.date.startsWith(today));
+			const today = Utils.getDateKey();
+			const todayTransactions = AppState.transactions.filter(t => Utils.getDateKeyFromISO(t.date) === today);
 			
-			const totalSales = todayTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
-			const totalOrders = todayTransactions.length;
+			const totalSales = todayTransactions.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+			const totalTransactions = todayTransactions.length;
 			const completedOrders = AppState.orders.filter(o => 
-				o.status === 'completed' && o.completedAt && o.completedAt.startsWith(today)
+				o.status === 'completed' && Utils.getDateKeyFromISO(o.completedAt) === today
 			).length;
 
 			const container = document.getElementById('close-cash-content');
@@ -1833,8 +2307,8 @@
 				<div class="close-cash-summary">
 					<h2>Cierre de Caja - ${new Date().toLocaleDateString('es-MX')}</h2>
 					<div class="close-cash-line">
-						<span>Total de Ventas:</span>
-						<span>${totalOrders}</span>
+						<span>Ventas registradas:</span>
+						<span>${totalTransactions}</span>
 					</div>
 					<div class="close-cash-line">
 						<span>Pedidos Completados:</span>
@@ -1848,8 +2322,8 @@
 						Total del Día: ${Utils.formatCurrency(totalSales)}
 					</div>
 					<div style="margin-top: 20px; display: flex; gap: 10px;">
-						<button class="btn" onclick="generateCloseCashPDF()">📄 Ver PDF</button>
-						<button class="btn btn-success" onclick="saveCloseCash()">💾 Guardar Cierre</button>
+						<button class="btn" onclick="generateCloseCashPDF()"><span class="icon-dot icon-dot--info"></span><span>Ver PDF</span></button>
+						<button class="btn btn-success" onclick="saveCloseCash()"><span class="icon-dot icon-dot--success"></span><span>Guardar Cierre</span></button>
 					</div>
 				</div>
 			`;
@@ -1858,8 +2332,8 @@
 		}
 
 		async function saveCloseCash() {
-			const today = new Date().toISOString().split('T')[0];
-			const todayTransactions = AppState.transactions.filter(t => t.date && t.date.startsWith(today));
+			const today = Utils.getDateKey();
+			const todayTransactions = AppState.transactions.filter(t => Utils.getDateKeyFromISO(t.date) === today);
 			
 			// Verificar si ya existe un cierre para hoy
 			const existingClosure = AppState.cashClosures.find(c => c.date === today);
@@ -1867,9 +2341,9 @@
 				if (!confirm('Ya existe un cierre para hoy. ¿Deseas actualizarlo?')) return;
 			}
 
-			const totalSales = todayTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+			const totalSales = todayTransactions.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 			const completedOrders = AppState.orders.filter(o => 
-				o.status === 'completed' && o.completedAt && o.completedAt.startsWith(today)
+				o.status === 'completed' && Utils.getDateKeyFromISO(o.completedAt) === today
 			).length;
 
 			const closure = {
@@ -1920,9 +2394,9 @@
 					<td>${closure.totalTransactions} ventas</td>
 					<td style="color: var(--success); font-weight: 600;">${Utils.formatCurrency(closure.totalSales)}</td>
 					<td>
-						<button class="btn btn-small btn-warning" onclick="viewClosureDetail('${closure.id}')">👁️ Ver</button>
-						<button class="btn btn-small btn-secondary" onclick="generateClosurePDF('${closure.id}')">📄 PDF</button>
-						<button class="btn btn-small btn-danger" onclick="deleteClosure('${closure.id}')">🗑️</button>
+						<button class="btn btn-small btn-warning" onclick="viewClosureDetail('${closure.id}')"><span class="icon-dot icon-dot--warning"></span><span>Ver</span></button>
+						<button class="btn btn-small btn-secondary" onclick="generateClosurePDF('${closure.id}')"><span class="icon-dot icon-dot--secondary"></span><span>PDF</span></button>
+						<button class="btn btn-small btn-danger" onclick="deleteClosure('${closure.id}')"><span class="icon-dot icon-dot--danger"></span><span>Eliminar</span></button>
 					</td>
 				</tr>
 			`).join('');
@@ -1937,7 +2411,7 @@
 				<div class="close-cash-summary">
 					<h2>Cierre de Caja - ${new Date(closure.date).toLocaleDateString('es-MX')}</h2>
 					<div class="close-cash-line">
-						<span>Total de Ventas:</span>
+						<span>Ventas registradas:</span>
 						<span>${closure.totalTransactions}</span>
 					</div>
 					<div class="close-cash-line">
@@ -1952,7 +2426,7 @@
 						Total del Día: ${Utils.formatCurrency(closure.totalSales)}
 					</div>
 					<div style="margin-top: 20px;">
-						<button class="btn" onclick="generateClosurePDF('${closure.id}')">📄 Ver PDF</button>
+						<button class="btn" onclick="generateClosurePDF('${closure.id}')"><span class="icon-dot icon-dot--info"></span><span>Ver PDF</span></button>
 					</div>
 				</div>
 			`;
@@ -2069,9 +2543,9 @@
 			const { jsPDF } = window.jspdf;
 			const doc = new jsPDF();
 			
-			const today = new Date().toISOString().split('T')[0];
-			const todayTransactions = AppState.transactions.filter(t => t.date && t.date.startsWith(today));
-			const totalSales = todayTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+			const today = Utils.getDateKey();
+			const todayTransactions = AppState.transactions.filter(t => Utils.getDateKeyFromISO(t.date) === today);
+			const totalSales = todayTransactions.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 			
 			doc.setFontSize(20);
 			doc.text('CIERRE DE CAJA', 105, 20, { align: 'center' });
@@ -2175,8 +2649,8 @@
 			});
 
 			// === MÉTRICAS PRINCIPALES ===
-			const today = new Date().toISOString().split('T')[0];
-			const thisMonth = new Date().toISOString().slice(0, 7);
+			const today = Utils.getDateKey();
+			const thisMonth = Utils.getMonthKey();
 			
 			let profitToday = 0;
 			let profitMonth = 0;
@@ -2185,8 +2659,8 @@
 			let ordersMonthCount = 0;
 			
 			completedOrders.forEach(order => {
-				const orderDate = order.completedAt ? order.completedAt.split('T')[0] : '';
-				const orderMonth = order.completedAt ? order.completedAt.slice(0, 7) : '';
+				const orderDate = Utils.getDateKeyFromISO(order.completedAt);
+				const orderMonth = Utils.getMonthKeyFromISO(order.completedAt);
 				
 				let orderTotal = 0;
 				order.items.forEach(item => {
@@ -2256,14 +2730,14 @@
 			const salesByDay = {};
 			for (let i = 6; i >= 0; i--) {
 				const date = new Date();
-				date.setDate(date.getDate() - i);
-				const dateStr = date.toISOString().split('T')[0];
-				last7Days.push(dateStr);
-				salesByDay[dateStr] = 0;
+				date.setUTCDate(date.getUTCDate() - i);
+				const dateKey = Utils.getDateKey(date);
+				last7Days.push(dateKey);
+				salesByDay[dateKey] = 0;
 			}
 
 			completedOrders.forEach(order => {
-				const orderDate = order.completedAt ? order.completedAt.split('T')[0] : '';
+				const orderDate = Utils.getDateKeyFromISO(order.completedAt);
 				if (salesByDay.hasOwnProperty(orderDate)) {
 					order.items.forEach(item => {
 						salesByDay[orderDate] += item.price * item.quantity;
@@ -2276,10 +2750,7 @@
 			salesByDayChart = new Chart(ctxDay, {
 				type: 'line',
 				data: {
-					labels: last7Days.map(d => {
-						const date = new Date(d + 'T00:00:00');
-						return date.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric' });
-					}),
+					labels: last7Days.map(d => Utils.formatDateKeyForChart(d)),
 					datasets: [{
 						label: 'Ventas',
 						data: last7Days.map(d => salesByDay[d]),
@@ -2380,14 +2851,15 @@
 			const profitByMonth = {};
 			for (let i = 5; i >= 0; i--) {
 				const date = new Date();
-				date.setMonth(date.getMonth() - i);
-				const monthStr = date.toISOString().slice(0, 7);
-				last6Months.push(monthStr);
-				profitByMonth[monthStr] = 0;
+				date.setUTCDate(1);
+				date.setUTCMonth(date.getUTCMonth() - i);
+				const monthKey = Utils.getMonthKey(date);
+				last6Months.push(monthKey);
+				profitByMonth[monthKey] = 0;
 			}
 
 			completedOrders.forEach(order => {
-				const orderMonth = order.completedAt ? order.completedAt.slice(0, 7) : '';
+				const orderMonth = Utils.getMonthKeyFromISO(order.completedAt);
 				if (profitByMonth.hasOwnProperty(orderMonth)) {
 					order.items.forEach(item => {
 						const menuItem = AppState.menuItems.find(m => m.id === item.menuItemId);
@@ -2519,7 +2991,7 @@
 						<tr>
 							<td>
 								<strong>${product.name}</strong>
-								${noCostConfigured ? '<br><small style="color: #ff9800;">⚠️ Sin costo configurado</small>' : ''}
+								${noCostConfigured ? '<br><small style="color: #ff9800; display: inline-flex; align-items: center; gap: 6px;"><span class="icon-dot icon-dot--warning" style="width: 8px; height: 8px; box-shadow: none;"></span><span>Sin costo configurado</span></small>' : ''}
 							</td>
 							<td>${product.quantity}</td>
 							<td>
@@ -2552,14 +3024,14 @@
 			const pendingOrders = AppState.orders.filter(o => o.status === 'pending');
 			const cancelledOrders = AppState.orders.filter(o => o.status === 'cancelled');
 			
-			let message = `📊 ESTADO DEL SISTEMA\n\n`;
+			let message = `ESTADO DEL SISTEMA\n\n`;
 			message += `Total de órdenes: ${totalOrders}\n`;
 			message += `- Completadas: ${completedOrders.length}\n`;
 			message += `- Pendientes: ${pendingOrders.length}\n`;
 			message += `- Canceladas: ${cancelledOrders.length}\n\n`;
 			
 			if (completedOrders.length > 0) {
-				message += `🛒 ÓRDENES COMPLETADAS:\n`;
+				message += `ORDENES COMPLETADAS:\n`;
 				completedOrders.forEach((order, i) => {
 					const date = order.completedAt ? new Date(order.completedAt).toLocaleString('es-MX') : 'Sin fecha';
 					const items = order.items.length;
@@ -2568,7 +3040,7 @@
 					message += `   ${items} producto(s) - Total: ${Utils.formatCurrency(total)}\n`;
 				});
 			} else {
-				message += `ℹ️ No hay órdenes completadas en el sistema.\n`;
+				message += `No hay órdenes completadas en el sistema.\n`;
 				message += `Por eso la sección de Rentabilidad está vacía.\n\n`;
 				message += `Para ver datos de rentabilidad:\n`;
 				message += `1. Ve a "Dashboard"\n`;
@@ -2583,7 +3055,7 @@
 		// CONFIGURACIÓN DEL SISTEMA
 		async function resetSalesData() {
 			const confirmation = prompt(
-				'⚠️ ADVERTENCIA: Esta acción eliminará TODOS los datos de ventas de forma PERMANENTE.\n\n' +
+				'ADVERTENCIA: Esta acción eliminará TODOS los datos de ventas de forma PERMANENTE.\n\n' +
 				'Se eliminarán:\n' +
 				'• Todas las órdenes\n' +
 				'• Todas las transacciones\n' +
@@ -2618,12 +3090,12 @@
 				});
 				await API.save('tables', AppState.tables);
 
-				alert('✅ Datos de ventas eliminados correctamente.\n\nLa aplicación está lista para uso en producción.');
+				alert('Datos de ventas eliminados correctamente.\n\nLa aplicación está lista para uso en producción.');
 				
 				// Refrescar vistas
 				renderDashboard();
 				renderOrders();
-				renderTransactions();
+				renderFinance();
 				updateSystemInfo();
 				generateProfitabilityReport();
 			} catch (error) {
