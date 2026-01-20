@@ -254,6 +254,33 @@
 			75% { transform: translateX(5px); }
 		}
 
+		.notification-indicator {
+			position: fixed;
+			bottom: 20px;
+			right: 20px;
+			background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+			color: #fff;
+			padding: 15px 25px;
+			border-radius: 50px;
+			font-size: 14px;
+			font-weight: 600;
+			box-shadow: 0 4px 20px rgba(76, 175, 80, 0.4);
+			display: none;
+			align-items: center;
+			gap: 10px;
+			z-index: 10000;
+			animation: pulse 2s infinite;
+		}
+
+		.notification-indicator.active {
+			display: flex;
+		}
+
+		@keyframes pulse {
+			0%, 100% { transform: scale(1); }
+			50% { transform: scale(1.05); }
+		}
+
 		.empty-state {
 			text-align: center;
 			padding: 80px 20px;
@@ -323,6 +350,12 @@
 		<div id="orders-container" class="orders-grid"></div>
 	</div>
 
+	<!-- Indicador de notificaciones enviadas -->
+	<div id="notification-indicator" class="notification-indicator">
+		<span>✅</span>
+		<span>Notificaciones activas</span>
+	</div>
+
 	<script src="app.js"></script>
 	<script>
 		let soundEnabled = localStorage.getItem('kitchenSound') !== 'false';
@@ -334,6 +367,7 @@
 			renderKitchen();
 			startAutoRefresh();
 			updateSoundIcon();
+			updateNotificationIndicator();
 		}
 
 		function startAutoRefresh() {
@@ -341,6 +375,7 @@
 			autoRefreshInterval = setInterval(async () => {
 				await loadInitialData();
 				renderKitchen();
+				updateNotificationIndicator();
 			}, 5000); // Actualizar cada 5 segundos
 		}
 
@@ -506,11 +541,19 @@
 			const order = AppState.orders.find(o => o.id === orderId);
 			if (!order) return;
 
-			// Enviar notificación al panel principal (index.html)
+			// Marcar timestamp de notificación en el pedido
+			order.kitchenNotifiedAt = new Date().toISOString();
+			
+			// Guardar en base de datos para sincronización cross-device
+			API.save('orders', AppState.orders).catch(error => {
+				console.error('Error guardando notificación:', error);
+			});
+
+			// Enviar notificación al panel principal (mismo dispositivo)
 			const notification = {
 				tableNumber: order.tableNumber,
 				orderId: order.id,
-				timestamp: new Date().toISOString()
+				timestamp: order.kitchenNotifiedAt
 			};
 			
 			localStorage.setItem('kitchenNotification', JSON.stringify(notification));
@@ -561,6 +604,21 @@
 
 		function updateSoundIcon() {
 			document.getElementById('sound-icon').textContent = soundEnabled ? '🔔' : '🔕';
+		}
+
+		function updateNotificationIndicator() {
+			const indicator = document.getElementById('notification-indicator');
+			const hasNotifiedOrders = AppState.orders.some(order => 
+				order.kitchenNotifiedAt && 
+				order.status === 'pending' &&
+				order.items.every(item => item.kitchenStatus === 'ready')
+			);
+			
+			if (hasNotifiedOrders) {
+				indicator.classList.add('active');
+			} else {
+				indicator.classList.remove('active');
+			}
 		}
 
 		function playSound() {

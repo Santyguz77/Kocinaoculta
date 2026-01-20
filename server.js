@@ -128,4 +128,4 @@ app.delete("/api/:table/:id", async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3002;
-app.listen(PORT, () => console.log(`✅ API de Restaurante corriendo en puerto ${PORT}`));
+app.listen(PORT, () => console.log(`✅ API de Restaurante v1.0.1 corriendo en puerto ${PORT}`));

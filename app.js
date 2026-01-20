@@ -1,5 +1,6 @@
 // Configuración de la API
 const API_URL = 'https://auction-array-comedy-its.trycloudflare.com/api'; // Cambiar por tu VPS en producción
+const APP_TIMEZONE = 'America/Bogota';
 
 // Estado global de la aplicación
 const AppState = {
@@ -117,6 +118,47 @@ const Utils = {
 			hour: '2-digit',
 			minute: '2-digit'
 		}).format(new Date(date));
+	},
+
+	getDateKey(date = new Date(), timeZone = APP_TIMEZONE) {
+		return new Intl.DateTimeFormat('en-CA', {
+			timeZone,
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit'
+		}).format(date);
+	},
+
+	getMonthKey(date = new Date(), timeZone = APP_TIMEZONE) {
+		const parts = new Intl.DateTimeFormat('en-CA', {
+			timeZone,
+			year: 'numeric',
+			month: '2-digit'
+		}).formatToParts(date);
+		const year = parts.find(p => p.type === 'year')?.value || '0000';
+		const month = parts.find(p => p.type === 'month')?.value || '01';
+		return `${year}-${month}`;
+	},
+
+	getDateKeyFromISO(isoString, timeZone = APP_TIMEZONE) {
+		if (!isoString) return '';
+		return Utils.getDateKey(new Date(isoString), timeZone);
+	},
+
+	getMonthKeyFromISO(isoString, timeZone = APP_TIMEZONE) {
+		if (!isoString) return '';
+		return Utils.getMonthKey(new Date(isoString), timeZone);
+	},
+
+	formatDateKeyForChart(dateKey, timeZone = APP_TIMEZONE) {
+		if (!dateKey) return '';
+		const [year, month, day] = dateKey.split('-').map(Number);
+		const anchor = new Date(Date.UTC(year, (month || 1) - 1, day || 1, 12, 0, 0));
+		return new Intl.DateTimeFormat('es-MX', {
+			timeZone,
+			weekday: 'short',
+			day: 'numeric'
+		}).format(anchor);
 	},
 	
 	showNotification(message, type = 'info') {
@@ -264,3 +306,4 @@ window.Storage = Storage;
 window.loadInitialData = loadInitialData;
 window.initializeDefaultData = initializeDefaultData;
 window.loadCashClosures = loadCashClosures;
+window.APP_TIMEZONE = APP_TIMEZONE;

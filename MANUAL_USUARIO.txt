@@ -1,0 +1,834 @@
+================================================================================
+              SISTEMA DE GESTION PARA RESTAURANTES - KOCINA OCULTA
+                         MANUAL DE USUARIO Y DOCUMENTACION
+                              Version 1.0 - 2025
+================================================================================
+
+TABLA DE CONTENIDOS
+-------------------
+1. Descripcion General del Sistema
+2. Modulos y Funcionalidades
+3. Manual de Usuario por Modulo
+4. Preguntas Frecuentes (FAQ)
+5. Soporte Tecnico
+
+================================================================================
+1. DESCRIPCION GENERAL DEL SISTEMA
+================================================================================
+
+El Sistema de Gestion para Restaurantes es una aplicacion web integral diseñada
+para optimizar la operacion completa de establecimientos gastronomicos. 
+Desarrollado como Progressive Web App (PWA), el sistema funciona tanto en 
+navegadores web como aplicacion instalable en dispositivos moviles y 
+computadoras.
+
+CARACTERISTICAS PRINCIPALES:
+- Gestion completa de pedidos en tiempo real
+- Control de mesas y estados de ocupacion
+- Sistema de cocina con seguimiento de preparacion
+- Administracion de menu con costos y rentabilidad
+- Gestion de meseros y asignacion de pedidos
+- Analisis de ventas y reportes de rentabilidad
+- Sistema de notificaciones entre modulos
+- Funcionamiento offline con sincronizacion automatica
+- Interfaz responsiva adaptable a cualquier dispositivo
+
+ARQUITECTURA TECNICA:
+El sistema utiliza IndexedDB para almacenamiento local de datos, permitiendo
+operacion sin conexion a internet. La arquitectura multi-ventana permite que
+diferentes areas del restaurante (cocina, meseros, administracion) trabajen
+simultaneamente de forma sincronizada.
+
+REQUISITOS DEL SISTEMA:
+- Navegador web moderno (Chrome 90+, Firefox 88+, Safari 14+, Edge 90+)
+- Resolucion minima: 1024x768 para panel administrativo
+- Resolucion minima: 768x1024 para tablets de meseros/cocina
+- Conexion a internet recomendada para sincronizacion
+- 50MB de espacio de almacenamiento disponible
+
+================================================================================
+2. MODULOS Y FUNCIONALIDADES
+================================================================================
+
+El sistema se divide en cinco modulos principales:
+
+2.1 PANEL ADMINISTRATIVO (index.html)
+--------------------------------------
+Funcionalidades:
+- Dashboard con metricas en tiempo real
+- Gestion de mesas (crear, editar, eliminar)
+- Toma de pedidos directa desde dashboard
+- Visualizacion de pedidos activos y completados
+- Gestion de meseros (alta, baja, edicion)
+- Configuracion de menu (precios, costos, disponibilidad)
+- Analisis de rentabilidad con graficos interactivos
+- Cierre de caja y reportes de ventas
+- Configuracion del sistema
+- Recepcion de notificaciones de cocina
+
+Metricas del Dashboard:
+- Mesas ocupadas vs disponibles
+- Pedidos activos en tiempo real
+- Total de ventas del dia
+- Promedio de venta por mesa
+- Meseros activos
+
+Analisis de Rentabilidad:
+- Ganancia del dia y del mes
+- Margen de ganancia promedio
+- Producto mas rentable
+- Producto mas vendido
+- Ticket promedio
+- Graficos de ventas por dia
+- Graficos de productos mas vendidos
+- Graficos de ganancia mensual
+- Distribucion de ventas por categoria
+
+2.2 MODULO DE MESEROS (meseros.html)
+-------------------------------------
+Funcionalidades:
+- Seleccion de mesero activo
+- Visualizacion de mesas asignadas
+- Toma de pedidos por mesa
+- Agregado/eliminacion de items al pedido
+- Control de cantidades por producto
+- Notas especiales por item
+- Calculo automatico de totales
+- Envio de pedidos a cocina
+- Visualizacion de estado de pedidos
+- Historial de ordenes por mesero
+
+Flujo de Trabajo:
+1. El mesero selecciona su nombre al ingresar
+2. Visualiza las mesas del restaurante
+3. Selecciona mesa para tomar pedido
+4. Agrega items del menu al pedido
+5. Ajusta cantidades y agrega notas
+6. Confirma y envia pedido a cocina
+7. Monitorea estado de preparacion
+8. Entrega pedido cuando esta listo
+
+2.3 MODULO DE COCINA (cocina.html)
+-----------------------------------
+Funcionalidades:
+- Visualizacion de pedidos pendientes en tiempo real
+- Seguimiento individual por item del pedido
+- Sistema de estados de preparacion (Pendiente/Preparando/Listo)
+- Alertas visuales para pedidos urgentes (+15 minutos)
+- Estadisticas de cocina en tiempo real
+- Auto-actualizacion cada 5 segundos
+- Control de sonido de alertas
+- Actualizacion manual bajo demanda
+- Notificacion automatica cuando pedido esta completo
+
+Estados de Preparacion:
+- PENDIENTE (Gris): Item recien recibido, sin iniciar
+- PREPARANDO (Naranja): Item en proceso de elaboracion
+- LISTO (Verde): Item terminado y listo para servir
+
+Flujo de Trabajo:
+1. Pedido llega automaticamente a pantalla de cocina
+2. Cocinero selecciona "Iniciar" en cada item
+3. Item cambia a estado "Preparando"
+4. Al terminar, marca item como "Listo"
+5. Cuando todos los items estan listos, se notifica automaticamente
+6. Panel administrativo recibe alerta sonora y visual
+7. Mesero es notificado para recoger pedido
+
+2.4 MENU PUBLICO (Menu.html)
+-----------------------------
+Funcionalidades:
+- Visualizacion publica del menu del restaurante
+- Organizacion por categorias
+- Buscador de productos
+- Descripcion detallada de cada plato
+- Precios actualizados
+- Indicador de disponibilidad
+- Diseño atractivo para clientes
+- Visualizacion en dispositivos moviles
+
+Categorias Predefinidas:
+- Entradas
+- Platos Principales
+- Acompañamientos
+- Postres
+- Bebidas
+- Especiales del Dia
+
+2.5 SISTEMA DE AUTENTICACION (login.html)
+------------------------------------------
+Funcionalidades:
+- Control de acceso al sistema
+- Validacion de credenciales
+- Gestion de sesiones
+- Cierre de sesion seguro
+- Proteccion de datos sensibles
+
+================================================================================
+3. MANUAL DE USUARIO POR MODULO
+================================================================================
+
+3.1 PANEL ADMINISTRATIVO - GUIA DE USO
+---------------------------------------
+
+ACCESO AL SISTEMA:
+1. Abrir navegador web
+2. Ingresar URL del sistema
+3. Iniciar sesion con credenciales de administrador
+4. El dashboard principal se muestra automaticamente
+
+NAVEGACION:
+El panel administrativo cuenta con menu lateral que incluye:
+- Dashboard: Vista general del restaurante
+- Mesas: Gestion de mesas y pedidos
+- Meseros: Administracion de personal
+- Menu: Configuracion de productos
+- Rentabilidad: Analisis financiero
+- Cierre de Caja: Reportes y cierres
+- Configuracion: Ajustes del sistema
+
+GESTION DE MESAS:
+a) Crear Nueva Mesa:
+   - Clic en "Mesas" en menu lateral
+   - Clic en boton "Nueva Mesa"
+   - Ingresar numero de mesa
+   - Ingresar capacidad de personas
+   - Clic en "Guardar"
+
+b) Tomar Pedido desde Dashboard:
+   - En seccion Dashboard, localizar mesa deseada
+   - Clic en boton "Tomar Pedido" de la mesa
+   - Se abre modal de pedido
+   - Seleccionar mesero responsable
+   - Agregar productos del menu
+   - Ajustar cantidades con botones +/-
+   - Agregar notas especiales si necesario
+   - Verificar total calculado automaticamente
+   - Clic en "Guardar Pedido"
+
+c) Completar Pedido:
+   - Localizar pedido activo en lista
+   - Clic en boton "Completar"
+   - Sistema marca pedido como terminado
+   - Mesa queda disponible automaticamente
+   - Venta se registra en estadisticas
+
+d) Cancelar Pedido:
+   - Localizar pedido activo
+   - Clic en boton "Cancelar"
+   - Confirmar cancelacion
+   - Pedido se elimina del sistema
+
+GESTION DE MESEROS:
+a) Agregar Mesero:
+   - Clic en "Meseros" en menu lateral
+   - Clic en boton "Nuevo Mesero"
+   - Ingresar nombre completo del mesero
+   - Clic en "Guardar"
+   
+b) Editar Mesero:
+   - Localizar mesero en lista
+   - Clic en boton "Editar"
+   - Modificar nombre
+   - Clic en "Guardar"
+
+c) Eliminar Mesero:
+   - Localizar mesero en lista
+   - Clic en boton "Eliminar"
+   - Confirmar eliminacion
+   - Nota: No se pueden eliminar meseros con pedidos activos
+
+CONFIGURACION DE MENU:
+a) Agregar Producto:
+   - Clic en "Menu" en menu lateral
+   - Clic en boton "Nuevo Producto"
+   - Ingresar nombre del producto
+   - Ingresar descripcion detallada
+   - Seleccionar categoria
+   - Ingresar precio de venta al publico
+   - Ingresar costo de produccion
+   - Sistema calcula automaticamente:
+     * Ganancia neta
+     * Margen de ganancia porcentual
+   - Clic en "Guardar"
+
+b) Editar Producto:
+   - Localizar producto en tabla de menu
+   - Clic en boton "Editar"
+   - Modificar campos necesarios
+   - Clic en "Guardar"
+
+c) Controlar Disponibilidad:
+   - Localizar producto en tabla
+   - Clic en boton de visibilidad
+   - Estados posibles:
+     * "Visible": Producto disponible para venta
+     * "Oculto": Producto no disponible temporalmente
+   - El cambio es inmediato en todos los modulos
+
+d) Eliminar Producto:
+   - Localizar producto en tabla
+   - Clic en boton "Eliminar"
+   - Confirmar eliminacion
+   - Producto se elimina permanentemente
+
+ANALISIS DE RENTABILIDAD:
+a) Metricas Principales:
+   - Ganancia del Dia: Utilidad neta acumulada hoy
+   - Ganancia del Mes: Utilidad neta mensual
+   - Margen Promedio: Porcentaje de ganancia sobre ventas
+   - Producto Mas Rentable: Item con mayor margen
+   - Producto Mas Vendido: Item con mayor volumen
+   - Ticket Promedio: Valor promedio por pedido
+
+b) Graficos Interactivos:
+   - Ventas por Dia: Tendencia de ventas ultimos 7 dias
+   - Top 5 Productos: Productos mas vendidos por cantidad
+   - Ganancia Mensual: Comparativo de utilidad por mes
+   - Distribucion por Categoria: Participacion de cada categoria
+
+c) Interpretacion de Datos:
+   - Graficos actualizados en tiempo real
+   - Colores indican rendimiento (verde: positivo, rojo: negativo)
+   - Pasar cursor sobre graficos para ver detalles
+   - Graficos exportables para reportes externos
+
+CIERRE DE CAJA:
+a) Realizar Cierre:
+   - Clic en "Cierre de Caja" en menu
+   - Sistema muestra resumen del dia:
+     * Total de ventas
+     * Cantidad de transacciones
+     * Ticket promedio
+     * Forma de pago (efectivo/tarjeta)
+   - Clic en "Realizar Cierre"
+   - Sistema genera reporte PDF automaticamente
+   - Cierre queda registrado en historial
+
+b) Consultar Cierres Anteriores:
+   - Acceder a seccion "Cierre de Caja"
+   - Ver lista de cierres historicos
+   - Filtrar por fecha
+   - Descargar reportes en PDF
+
+CONFIGURACION DEL SISTEMA:
+a) Resetear Datos de Ventas:
+   - Clic en "Configuracion" en menu
+   - Localizar seccion "Gestion de Datos"
+   - Clic en boton "Limpiar Datos de Ventas"
+   - Advertencia: Esta accion es IRREVERSIBLE
+   - Confirmar accion escribiendo "CONFIRMAR"
+   - Sistema elimina:
+     * Todos los pedidos completados
+     * Todas las transacciones
+     * Todos los cierres de caja
+     * Estadisticas de ventas
+   - Nota: NO elimina mesas, meseros ni productos del menu
+   - Usar UNICAMENTE para entrega de sistema nuevo
+
+b) Configuraciones Adicionales:
+   - Ajustar nombre del restaurante
+   - Configurar informacion de contacto
+   - Ajustar zona horaria
+   - Configurar impresora de tickets
+
+NOTIFICACIONES DE COCINA:
+- Sistema recibe alertas automaticas cuando pedidos estan listos
+- Notificacion visual: Banner verde deslizante con numero de mesa
+- Notificacion sonora: Triple beep melodico
+- Notificacion permanece 5 segundos en pantalla
+- Sistema actualiza automaticamente estado de pedidos
+- Audio se puede silenciar desde configuracion
+
+
+3.2 MODULO DE MESEROS - GUIA DE USO
+------------------------------------
+
+INICIO DE SESION:
+1. Abrir modulo de meseros (meseros.html)
+2. Seleccionar nombre del mesero de la lista
+3. Sistema filtra mesas asignadas al mesero
+
+TOMAR PEDIDO:
+a) Seleccionar Mesa:
+   - Visualizar mesas disponibles en pantalla
+   - Identificar mesa por numero
+   - Verificar estado (Disponible/Ocupada)
+   - Clic en mesa deseada
+
+b) Armar Pedido:
+   - Se muestra menu completo del restaurante
+   - Productos organizados por categoria
+   - Usar buscador si necesario
+   - Clic en producto para agregarlo al pedido
+
+c) Ajustar Cantidades:
+   - Cada item tiene controles +/-
+   - Clic en "-" para reducir cantidad
+   - Clic en "+" para aumentar cantidad
+   - Si cantidad llega a 0, item se elimina
+
+d) Agregar Notas Especiales:
+   - Clic en campo de notas del item
+   - Escribir especificaciones:
+     * "Sin cebolla"
+     * "Termino medio"
+     * "Extra salsa"
+     * "Para llevar"
+   - Notas se envian directamente a cocina
+
+e) Revisar Pedido:
+   - Sistema muestra resumen en tiempo real:
+     * Lista de items con cantidades
+     * Precio individual por item
+     * Subtotal
+     * Total general del pedido
+   - Verificar que todo este correcto
+
+f) Enviar Pedido:
+   - Clic en boton "Enviar Pedido"
+   - Sistema confirma envio exitoso
+   - Pedido aparece inmediatamente en cocina
+   - Mesa cambia a estado "Ocupada"
+
+MODIFICAR PEDIDO EXISTENTE:
+- Localizar pedido activo
+- Clic en boton "Editar"
+- Agregar o quitar items
+- Ajustar cantidades
+- Guardar cambios
+- Nota: Solo se pueden modificar pedidos no enviados a cocina
+
+MONITOREAR PEDIDOS:
+- Ver lista de pedidos activos del mesero
+- Estado de preparacion en tiempo real
+- Identificar pedidos listos para servir
+- Coordinar entrega con cocina
+
+
+3.3 MODULO DE COCINA - GUIA DE USO
+-----------------------------------
+
+ACCESO AL MODULO:
+1. Abrir ventana de cocina (cocina.html)
+2. Sistema carga automaticamente pedidos pendientes
+3. No requiere inicio de sesion
+
+INTERFAZ DE COCINA:
+a) Panel Superior:
+   - Estadisticas en tiempo real:
+     * Pedidos Pendientes: Total de ordenes sin completar
+     * Items en Preparacion: Productos en proceso
+     * Pedidos Listos: Ordenes completas esperando entrega
+     * Items Totales: Total de productos por preparar
+
+b) Area de Pedidos:
+   - Tarjetas individuales por mesa
+   - Informacion visible:
+     * Numero de mesa
+     * Mesero responsable
+     * Hora de ingreso del pedido
+     * Lista de items con cantidades
+     * Estado individual por item
+
+c) Controles de Interfaz:
+   - Boton "Actualizar": Refresco manual de pedidos
+   - Boton "Sonido": Activar/desactivar alertas
+   - Boton "Regresar": Volver al panel principal
+
+GESTION DE PEDIDOS:
+a) Recibir Nuevo Pedido:
+   - Pedido aparece automaticamente en pantalla
+   - Tarjeta con borde blanco indica pedido nuevo
+   - Todos los items en estado "Pendiente" (gris)
+   - Sistema ordena por antiguedad
+
+b) Iniciar Preparacion de Item:
+   - Localizar item en tarjeta de pedido
+   - Clic en boton "Iniciar" del item
+   - Item cambia a estado "Preparando" (naranja)
+   - Cocinero comienza elaboracion del plato
+
+c) Marcar Item como Listo:
+   - Al terminar preparacion del item
+   - Clic en boton "Listo" del item
+   - Item cambia a estado "Listo" (verde)
+   - Item listo para ser servido
+
+d) Completar Pedido Completo:
+   - Cuando TODOS los items estan en estado "Listo"
+   - Sistema detecta automaticamente finalizacion
+   - Se envia notificacion automatica a panel administrativo
+   - Notificacion sonora en computadora de administrador
+   - Mesero es alertado para recoger pedido
+   - Confirmacion visual en pantalla de cocina
+
+ALERTAS Y NOTIFICACIONES:
+a) Pedidos Urgentes:
+   - Pedidos con mas de 15 minutos se marcan urgentes
+   - Borde rojo en tarjeta de pedido
+   - Icono de alerta visible
+   - Priorizar preparacion de estos pedidos
+
+b) Auto-actualizacion:
+   - Sistema actualiza automaticamente cada 5 segundos
+   - Nuevos pedidos aparecen sin intervencion
+   - Estados se sincronizan en tiempo real
+   - Auto-actualizacion se pausa si pestaña esta inactiva
+
+c) Notificaciones de Finalizacion:
+   - Al completar todos los items de un pedido
+   - Alerta sonora local en cocina (un beep)
+   - Notificacion verde confirma envio exitoso
+   - Panel administrativo recibe triple beep
+   - Banner verde deslizante en pantalla administrativa
+
+BUENAS PRACTICAS EN COCINA:
+- Marcar items como "Preparando" al iniciar trabajo
+- Actualizar estado "Listo" inmediatamente al terminar
+- Priorizar pedidos urgentes (mas de 15 minutos)
+- Mantener pantalla visible para todo el equipo
+- Verificar que todos los items esten listos antes de notificar
+- Coordinar con meseros para entrega oportuna
+
+
+3.4 MENU PUBLICO - GUIA DE USO
+-------------------------------
+
+ACCESO:
+- Navegador web: Ingresar URL publica del menu
+- QR Code: Escanear codigo desde mesa del restaurante
+- No requiere inicio de sesion
+
+NAVEGACION:
+a) Visualizar Menu:
+   - Menu completo visible al cargar
+   - Productos organizados por categoria
+   - Scroll vertical para explorar opciones
+
+b) Buscar Productos:
+   - Usar barra de busqueda superior
+   - Escribir nombre del producto o categoria
+   - Resultados se filtran en tiempo real
+   - Borrar busqueda para ver menu completo
+
+c) Ver Detalles de Producto:
+   - Nombre del plato destacado
+   - Descripcion detallada de ingredientes
+   - Precio claramente visible
+   - Indicador de disponibilidad
+   - Categoria a la que pertenece
+
+FUNCIONALIDAD PARA CLIENTES:
+- Consultar menu completo sin necesidad de version impresa
+- Verificar precios actualizados
+- Leer descripciones detalladas antes de ordenar
+- Identificar platos disponibles en el momento
+- Compartir menu via redes sociales
+
+
+3.5 SISTEMA DE AUTENTICACION - GUIA DE USO
+-------------------------------------------
+
+INICIO DE SESION:
+1. Abrir pagina de login (login.html)
+2. Ingresar nombre de usuario
+3. Ingresar contraseña
+4. Clic en boton "Iniciar Sesion"
+5. Sistema valida credenciales
+6. Redirige a modulo correspondiente segun rol
+
+ROLES DE USUARIO:
+- Administrador: Acceso completo al panel administrativo
+- Mesero: Acceso unicamente a modulo de meseros
+- Cocina: Acceso unicamente a modulo de cocina
+
+CERRAR SESION:
+- Clic en boton "Cerrar Sesion" en esquina superior
+- Sistema cierra sesion de forma segura
+- Redirige a pantalla de login
+
+RECUPERACION DE CONTRASEÑA:
+- Clic en "Olvide mi contraseña"
+- Ingresar correo electronico
+- Seguir instrucciones enviadas por email
+
+SEGURIDAD:
+- Contraseñas encriptadas
+- Sesiones con tiempo de expiracion
+- Cierre automatico por inactividad (30 minutos)
+- Proteccion contra accesos no autorizados
+
+================================================================================
+4. PREGUNTAS FRECUENTES (FAQ)
+================================================================================
+
+GENERALES:
+----------
+P: ¿El sistema funciona sin conexion a internet?
+R: Si. El sistema esta diseñado como PWA (Progressive Web App) y funciona
+   completamente offline. Los datos se almacenan localmente en el dispositivo
+   y se sincronizan automaticamente cuando hay conexion disponible.
+
+P: ¿Se puede instalar como aplicacion?
+R: Si. Desde el navegador, seleccionar opcion "Instalar" o "Agregar a pantalla
+   de inicio". El sistema funcionara como aplicacion nativa.
+
+P: ¿Cuantos dispositivos pueden usar el sistema simultaneamente?
+R: Ilimitados. Multiples dispositivos pueden acceder y trabajar al mismo tiempo.
+   Los cambios se sincronizan automaticamente entre todos los dispositivos.
+
+P: ¿Los datos estan respaldados?
+R: Si. El sistema realiza respaldos automaticos. Adicionalmente, se recomienda
+   realizar respaldos manuales periodicos desde la seccion de Configuracion.
+
+
+MESAS Y PEDIDOS:
+----------------
+P: ¿Como asigno un mesero a una mesa especifica?
+R: La asignacion se realiza al momento de tomar el pedido. El mesero
+   selecciona su nombre y el sistema registra la asignacion automaticamente.
+
+P: ¿Puedo modificar un pedido despues de enviarlo a cocina?
+R: Una vez enviado a cocina, el pedido no puede modificarse desde el modulo
+   de meseros. Debe coordinarse con administracion para hacer cambios.
+
+P: ¿Que hago si una mesa tiene pedidos multiples?
+R: El sistema permite multiples pedidos por mesa. Cada pedido se registra
+   independientemente y se pueden cerrar por separado o juntos.
+
+P: ¿Como libero una mesa si el pedido esta completo?
+R: Desde el panel administrativo, completar el pedido marcando el pago. 
+   La mesa automaticamente queda disponible para nuevos clientes.
+
+P: ¿Puedo dividir la cuenta de una mesa?
+R: Actualmente el sistema maneja pedidos completos por mesa. Para dividir
+   cuenta, se recomienda crear pedidos separados por grupo de comensales.
+
+
+MENU Y PRODUCTOS:
+-----------------
+P: ¿Como oculto temporalmente un producto sin eliminarlo?
+R: En la seccion Menu del panel administrativo, usar el boton de visibilidad
+   junto a cada producto. El producto se oculta del menu publico y de meseros
+   pero permanece en el sistema.
+
+P: ¿Puedo tener productos con el mismo nombre en diferentes categorias?
+R: Si, pero no es recomendable. Es mejor usar nombres descriptivos que
+   diferencien claramente cada producto.
+
+P: ¿Como actualizo los precios del menu?
+R: Desde el panel administrativo, seccion Menu, editar el producto y cambiar
+   el precio. El cambio es inmediato en todos los modulos.
+
+P: ¿Puedo agregar imagenes a los productos?
+R: Actualmente el sistema no incluye gestion de imagenes. Esta funcionalidad
+   puede agregarse en versiones futuras.
+
+P: ¿Como calculo correctamente el costo de un producto?
+R: El costo debe incluir:
+   - Materia prima (ingredientes)
+   - Insumos (empaques, servilletas)
+   - Proporcion de servicios (gas, electricidad)
+   - Mano de obra directa
+   No incluir costos fijos (alquiler, salarios administrativos).
+
+
+COCINA Y PREPARACION:
+---------------------
+P: ¿Los pedidos llegan automaticamente a la pantalla de cocina?
+R: Si. En cuanto un mesero envia un pedido, aparece inmediatamente en la
+   pantalla de cocina sin necesidad de actualizacion manual.
+
+P: ¿Puedo priorizar ciertos pedidos en cocina?
+R: Los pedidos se ordenan automaticamente por antiguedad. Los pedidos con mas
+   de 15 minutos se marcan urgentes automaticamente. La priorizacion adicional
+   es decision del personal de cocina.
+
+P: ¿Que hago si marco un item como "Listo" por error?
+R: Clic nuevamente en el item. El estado retrocede a "Preparando" y puede
+   volver a marcarse cuando corresponda.
+
+P: ¿La notificacion llega automaticamente cuando el pedido esta listo?
+R: Si. Cuando TODOS los items de un pedido estan marcados como "Listo", el
+   sistema envia automaticamente notificacion sonora y visual al panel
+   administrativo.
+
+P: ¿Como silencio las alertas de cocina?
+R: Usar el boton "Sonido" en el panel superior de la pantalla de cocina.
+   Las alertas visuales permanecen activas.
+
+
+RENTABILIDAD Y REPORTES:
+------------------------
+P: ¿Como interpreto el margen de ganancia?
+R: El margen indica que porcentaje del precio de venta es ganancia neta.
+   Ejemplo: Margen 60% significa que de $100 de venta, $60 son ganancia y
+   $40 son costos. Margen saludable en restaurantes: 60-70%.
+
+P: ¿Por que el producto mas vendido no es el mas rentable?
+R: Volumen de ventas no siempre equivale a mayor rentabilidad. Un producto
+   puede venderse mucho pero tener bajo margen, mientras otro vende menos
+   pero tiene margen alto, resultando en mayor ganancia total.
+
+P: ¿Los graficos se actualizan automaticamente?
+R: Si. Los graficos se regeneran automaticamente cada vez que se accede a la
+   seccion de Rentabilidad, mostrando siempre informacion actualizada.
+
+P: ¿Puedo exportar los reportes?
+R: Los cierres de caja generan reportes en PDF automaticamente. Los graficos
+   pueden capturarse con herramientas de captura de pantalla del dispositivo.
+
+P: ¿Como reseteo las estadisticas para empezar de cero?
+R: Desde Configuracion, usar la opcion "Limpiar Datos de Ventas". Esta accion
+   es IRREVERSIBLE y debe usarse unicamente al entregar sistema nuevo o iniciar
+   nuevo periodo contable.
+
+
+MESEROS Y PERSONAL:
+-------------------
+P: ¿Puedo tener dos meseros con el mismo nombre?
+R: Tecnicamente si, pero no es recomendable. Use nombres completos o
+   agregue inicial del apellido para diferenciarlos.
+
+P: ¿Como veo el rendimiento individual de cada mesero?
+R: El sistema registra que mesero tomo cada pedido. Esta informacion esta
+   disponible en los reportes de ventas y puede filtrarse por mesero.
+
+P: ¿Que pasa si elimino un mesero con pedidos activos?
+R: El sistema no permite eliminar meseros con pedidos activos. Primero deben
+   completarse o cancelarse todos sus pedidos pendientes.
+
+P: ¿Los meseros pueden ver pedidos de otros meseros?
+R: No. Cada mesero solo visualiza sus propias mesas y pedidos asignados.
+
+
+TECNICAS Y PROBLEMAS:
+---------------------
+P: ¿Que hago si el sistema no sincroniza cambios entre dispositivos?
+R: 1. Verificar conexion a internet en todos los dispositivos
+   2. Refrescar manualmente las paginas (F5 o Ctrl+R)
+   3. Si persiste, cerrar y volver a abrir la aplicacion
+   4. Verificar que todos usen la misma URL del sistema
+
+P: ¿El sistema se pone lento con muchos pedidos?
+R: El sistema esta optimizado para manejar cientos de pedidos. Si experimenta
+   lentitud, realizar cierre de caja periodico y limpiar pedidos antiguos.
+
+P: ¿Como actualizo el sistema a nueva version?
+R: Las actualizaciones se instalan automaticamente. Si hay version nueva
+   disponible, aparece notificacion solicitando refrescar la aplicacion.
+
+P: ¿Que navegador es mejor para usar el sistema?
+R: Chrome y Edge ofrecen mejor rendimiento. Firefox y Safari tambien son
+   compatibles. Evitar navegadores desactualizados (Internet Explorer).
+
+P: ¿Los datos se pueden perder?
+R: Los datos se almacenan localmente en el dispositivo y en el servidor.
+   Es altamente improbable perder datos. Aun asi, se recomienda realizar
+   respaldos periodicos.
+
+P: ¿Como recupero datos si borro el historial del navegador?
+R: Si se borra el almacenamiento local del navegador, los datos locales se
+   pierden. Si hay servidor configurado, los datos se recuperan automaticamente
+   al reconectar. Por eso es importante el respaldo periodico.
+
+P: ¿Puedo usar el sistema en tablet?
+R: Si. El sistema es completamente responsivo. Recomendado especialmente para
+   modulos de meseros y cocina. Panel administrativo funciona mejor en
+   computadora por cantidad de informacion visualizada.
+
+P: ¿Necesito instalar algo adicional?
+R: No. El sistema funciona completamente en el navegador. No requiere
+   instalacion de software adicional, drivers o plugins.
+
+
+CONFIGURACION Y PERSONALIZACION:
+--------------------------------
+P: ¿Puedo cambiar el nombre del restaurante en el sistema?
+R: Si. Desde la seccion Configuracion del panel administrativo, modificar
+   el nombre del establecimiento.
+
+P: ¿Como cambio los colores del sistema?
+R: Actualmente el sistema usa esquema de colores fijo (negro/blanco).
+   Personalizaciones de color requieren modificacion del codigo fuente.
+
+P: ¿Puedo agregar mas categorias al menu?
+R: Si. Al crear productos, puede escribir nuevas categorias. El sistema las
+   reconoce automaticamente y las agrega al catalogo.
+
+P: ¿Como configuro la impresora de tickets?
+R: Desde Configuracion, seccion Impresoras, agregar impresora termica.
+   Verificar que la impresora sea compatible con impresion web.
+
+P: ¿Puedo integrar el sistema con otros software?
+R: El sistema cuenta con API REST que permite integracion con sistemas
+   externos. Consultar documentacion tecnica para desarrolladores.
+
+
+================================================================================
+5. SOPORTE TECNICO
+================================================================================
+
+INFORMACION DE CONTACTO:
+------------------------
+Para asistencia tecnica, consultas o reportar problemas:
+
+Email: soporte@kocinaoculta.com
+Telefono: +1 (555) 123-4567
+Horario: Lunes a Viernes, 9:00 AM - 6:00 PM
+
+SOPORTE REMOTO:
+Disponible mediante programacion de sesion. Solicitar asistencia remota al
+email de soporte indicando:
+- Descripcion del problema
+- Capturas de pantalla (si aplica)
+- Navegador y version utilizada
+- Pasos para reproducir el error
+
+ACTUALIZACIONES:
+El sistema se actualiza automaticamente. Verificar version actual en:
+Panel Administrativo > Configuracion > Acerca de
+
+RECURSOS ADICIONALES:
+- Video tutoriales: www.kocinaoculta.com/tutoriales
+- Base de conocimientos: www.kocinaoculta.com/ayuda
+- Foro de comunidad: www.kocinaoculta.com/foro
+
+REPORTAR ERRORES:
+Al encontrar un error, reportar incluyendo:
+1. Descripcion detallada del problema
+2. Pasos exactos para reproducir el error
+3. Captura de pantalla del error
+4. Navegador y dispositivo utilizado
+5. Fecha y hora del incidente
+
+SUGERENCIAS Y MEJORAS:
+Sus sugerencias son importantes para mejorar el sistema. Enviar propuestas a:
+mejoras@kocinaoculta.com
+
+CAPACITACION:
+Disponible capacitacion personalizada para su equipo:
+- Capacitacion en sitio
+- Capacitacion virtual
+- Material de entrenamiento personalizado
+- Consultar tarifas y disponibilidad
+
+================================================================================
+NOTAS FINALES
+================================================================================
+
+Este manual cubre las funcionalidades principales del Sistema de Gestion para
+Restaurantes - Kocina Oculta v1.0. El sistema esta en constante desarrollo y
+nuevas funcionalidades se agregan periodicamente.
+
+Recomendamos revisar este manual periodicamente para conocer nuevas
+caracteristicas y mejores practicas.
+
+Ultima actualizacion: 4 de diciembre de 2025
+Version del manual: 1.0
+Compatible con: Sistema de Gestion para Restaurantes v1.0+
+
+================================================================================
+                         FIN DEL MANUAL DE USUARIO
+================================================================================

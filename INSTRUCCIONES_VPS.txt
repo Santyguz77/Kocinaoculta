@@ -1,0 +1,45 @@
+=======================================================
+INSTRUCCIONES PARA ARREGLAR EL SERVIDOR EN VPS
+=======================================================
+
+PROBLEMA: El puerto 3002 está ocupado y Cloudflare Tunnel no funciona
+
+SOLUCIÓN - Ejecuta estos comandos en tu VPS (Kali Linux):
+
+1️⃣ DETENER TODOS LOS PROCESOS PM2:
+   pm2 stop all
+   pm2 delete all
+
+2️⃣ ENCONTRAR QUÉ PROCESO USA EL PUERTO 3002:
+   fuser 3002/tcp
+   
+3️⃣ MATAR ESE PROCESO:
+   fuser -k 3002/tcp
+
+4️⃣ COPIAR EL ARCHIVO ACTUALIZADO DESDE TU PC AL VPS:
+   (Ejecuta esto en PowerShell de tu PC Windows)
+   
+   scp C:\Users\User\Desktop\Control\server.js root@TU_IP_VPS:/root/restaurante_api/server_restaurante.js
+
+5️⃣ EN EL VPS, INICIAR EL SERVIDOR CON PM2:
+   cd ~/restaurante_api
+   pm2 start server_restaurante.js --name restaurante-api
+   pm2 save
+   
+6️⃣ VERIFICAR QUE ESTÉ CORRIENDO:
+   pm2 list
+   pm2 logs restaurante-api
+
+7️⃣ REINICIAR CLOUDFLARE TUNNEL:
+   pm2 restart cloudflare-tunnel_restaurante
+   pm2 logs cloudflare-tunnel_restaurante
+
+8️⃣ VERIFICAR QUE EL TÚNEL FUNCIONE:
+   Abre en navegador: https://merchants-gossip-regarded-actor.trycloudflare.com
+   Debería mostrar: "🍽️ Servidor de Restaurante funcionando correctamente"
+
+=======================================================
+NOTA: Si Cloudflare Tunnel sigue sin funcionar, necesitas 
+configurarlo de nuevo con:
+   cloudflare-tunnel --url http://localhost:3002
+=======================================================

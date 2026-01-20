@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Iconos - Restaurante</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #000000;
+            color: #ffffff;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 { color: #ffffff; }
+        .upload-area {
+            background: #1a1a1a;
+            border: 3px dashed #ffffff;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            cursor: pointer;
+        }
+        .upload-area:hover {
+            background: #2a2a2a;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        button {
+            background: #ffffff;
+            color: #000000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #e0e0e0;
+        }
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .preview-item {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .preview-item img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            background: white;
+        }
+        .preview-item p {
+            margin: 10px 0 0 0;
+            font-size: 14px;
+            color: #ffffff;
+        }
+        #originalPreview {
+            max-width: 300px;
+            margin: 20px auto;
+            display: none;
+        }
+        #originalPreview img {
+            width: 100%;
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎨 Generador de Iconos PWA</h1>
+    <p>Sube tu logo (image.png) y genera automáticamente los iconos de 192x192 y 512x512 píxeles necesarios para la PWA</p>
+    
+    <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+        <h2>📁 Haz clic o arrastra tu imagen aquí</h2>
+        <p>Formatos: PNG, JPG, JPEG</p>
+        <input type="file" id="fileInput" accept="image/*">
+    </div>
+    
+    <div id="originalPreview">
+        <h3>Imagen Original:</h3>
+        <img id="originalImg" alt="Original">
+    </div>
+    
+    <div id="controls" style="display:none; text-align:center;">
+        <button onclick="generateIcons()">✨ Generar Iconos</button>
+    </div>
+    
+    <div id="previews" class="preview-grid"></div>
+
+    <script>
+        let uploadedImage = null;
+
+        const fileInput = document.getElementById('fileInput');
+        fileInput.addEventListener('change', handleFileSelect);
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                uploadedImage = new Image();
+                uploadedImage.src = e.target.result;
+                uploadedImage.onload = () => {
+                    document.getElementById('originalImg').src = e.target.result;
+                    document.getElementById('originalPreview').style.display = 'block';
+                    document.getElementById('controls').style.display = 'block';
+                };
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function generateIcons() {
+            if (!uploadedImage) {
+                alert('Por favor, sube una imagen primero');
+                return;
+            }
+
+            const sizes = [192, 512];
+            const previewsDiv = document.getElementById('previews');
+            previewsDiv.innerHTML = '<h2>Iconos Generados:</h2>';
+
+            sizes.forEach(size => {
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+
+                // Fondo transparente
+                ctx.clearRect(0, 0, size, size);
+
+                // Dibujar imagen escalada manteniendo aspecto
+                const scale = Math.min(size / uploadedImage.width, size / uploadedImage.height);
+                const x = (size - uploadedImage.width * scale) / 2;
+                const y = (size - uploadedImage.height * scale) / 2;
+                ctx.drawImage(uploadedImage, x, y, uploadedImage.width * scale, uploadedImage.height * scale);
+
+                // Crear preview
+                const previewItem = document.createElement('div');
+                previewItem.className = 'preview-item';
+                const img = document.createElement('img');
+                img.src = canvas.toDataURL('image/png');
+                const p = document.createElement('p');
+                p.textContent = `icon-${size}.png (${size}x${size})`;
+                
+                const downloadBtn = document.createElement('button');
+                downloadBtn.textContent = '⬇️ Descargar';
+                downloadBtn.onclick = () => downloadImage(canvas, `icon-${size}.png`);
+
+                previewItem.appendChild(img);
+                previewItem.appendChild(p);
+                previewItem.appendChild(downloadBtn);
+                previewsDiv.appendChild(previewItem);
+            });
+
+            const downloadAllBtn = document.createElement('button');
+            downloadAllBtn.textContent = '📦 Descargar Todos';
+            downloadAllBtn.style.marginTop = '20px';
+            downloadAllBtn.onclick = downloadAll;
+            previewsDiv.appendChild(downloadAllBtn);
+        }
+
+        function downloadImage(canvas, filename) {
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        function downloadAll() {
+            const sizes = [192, 512];
+            sizes.forEach((size, index) => {
+                setTimeout(() => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = size;
+                    canvas.height = size;
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, size, size);
+                    const scale = Math.min(size / uploadedImage.width, size / uploadedImage.height);
+                    const x = (size - uploadedImage.width * scale) / 2;
+                    const y = (size - uploadedImage.height * scale) / 2;
+                    ctx.drawImage(uploadedImage, x, y, uploadedImage.width * scale, uploadedImage.height * scale);
+                    downloadImage(canvas, `icon-${size}.png`);
+                }, index * 500);
+            });
+        }
+    </script>
+</body>
+</html>

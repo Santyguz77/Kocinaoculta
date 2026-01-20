@@ -1,0 +1,4677 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	
+	<!-- PWA Meta Tags -->
+	<meta name="theme-color" content="#c7ff00">
+	<meta name="description" content="Sistema de gestión para MIPC Computadores - Órdenes, facturas e inventario">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+	<meta name="apple-mobile-web-app-title" content="MIPC Taller">
+	<link rel="manifest" href="/manifest.json">
+	<link rel="icon" type="image/png" href="/icon-192.png">
+	<link rel="apple-touch-icon" href="/icon-192.png">
+	
+	<!-- Chart.js para gráficos -->
+	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+	
+	<title>Mipc Computadores</title>
+	<style>
+		:root{
+			--bg:#0f1720; --panel:#0f2430; --accent:#c7ff00; --muted:#9aa5b1; --card:#0b1720;
+		}
+		body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:#e6eef3;}
+		.app{display:flex;min-height:100vh}
+		.sidebar{width:240px;background:linear-gradient(180deg,#07121a,#0b1a22);padding:18px;box-shadow:2px 0 8px rgba(0,0,0,.4)}
+		.brand{font-weight:700;color:var(--accent);margin-bottom:18px}
+		.menu{list-style:none;padding:0;margin:0}
+		.menu li{padding:10px 8px;border-radius:8px;color:var(--muted);cursor:pointer;margin-bottom:6px}
+		.menu li.active{background:rgba(199,255,0,.08);color:var(--accent)}
+		.main{flex:1;padding:22px}
+		.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+		.card{background:linear-gradient(180deg, #071722, #06121a);padding:14px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+		.controls{display:flex;gap:8px;align-items:center}
+		button.btn{background:var(--accent);color:#07121a;border:0;padding:8px 12px;border-radius:6px;cursor:pointer}
+		table{width:100%;border-collapse:collapse;margin-top:12px;color:#dfeef2}
+		th,td{padding:8px 10px;text-align:left;border-bottom:1px solid rgba(255,255,255,.03);font-size:14px}
+		.actions button{margin-right:6px;padding:6px;border-radius:6px;border:0;cursor:pointer}
+		.btn-edit{background:#3bb4ff;color:#05121a}
+		.btn-delete{background:#ff5b6b;color:#fff}
+		.modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,8,.6)}
+		.modal.show{display:flex}
+		.modal .panel{width:640px;background:#071b22;padding:18px;border-radius:8px}
+		.form-row{display:flex;gap:8px;margin-bottom:8px}
+		.form-row input, .form-row textarea, select{flex:1;padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,.06);background:#051417;color:#eaf6f3}
+		.footer-note{margin-top:12px;color:var(--muted);font-size:13px}
+		.small{font-size:13px;color:var(--muted)}
+		
+		/* estilos para checkbox deshabilitado */
+		input[type="checkbox"]:disabled{opacity:0.4;cursor:not-allowed}
+		input[type="checkbox"]:disabled + span{opacity:0.5;cursor:not-allowed}
+
+		/* estilos para galería de imágenes */
+		.image-preview-container{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+		.image-preview{position:relative;width:100px;height:100px;border-radius:6px;overflow:hidden;border:1px solid rgba(255,255,255,.1)}
+		.image-preview img{width:100%;height:100%;object-fit:cover}
+		.image-preview .remove-img{position:absolute;top:2px;right:2px;background:#ff5b6b;color:#fff;border:0;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:11px}
+		.image-preview .remove-img:hover{background:#ff3b4b}
+
+		/* nuevo: estilos para badges de estado */
+		.status-badge{display:inline-block;padding:4px 8px;border-radius:12px;font-size:12px;color:#06121a}
+		.status-ingresado{background:#c7ff00}
+		.status-en_reparacion{background:#3bb4ff;color:#fff}
+		.status-espera_entrega{background:#ffcc33;color:#07121a}
+		.status-entregado{background:#7af0a5;color:#07121a}
+
+		/* nuevo: estilos para badges de estado de pago */
+		.payment-badge{display:inline-block;padding:4px 8px;border-radius:12px;font-size:12px;font-weight:600}
+		.payment-paid{background:#7af0a5;color:#07121a}
+		.payment-unpaid{background:#ff5b6b;color:#fff}
+		.btn-toggle-payment{background:#ffa726;color:#07121a;font-size:12px;padding:6px 10px}
+
+		/* pequeño ajuste: botones dentro de tablas también usan .btn para aspecto */
+		button.btn{font-size:13px;line-height:1;display:inline-block}
+
+		/* modal historial */
+		.history-list{max-height:320px;overflow:auto;padding:8px;border-radius:6px;background:#031419;color:#dff0ea}
+
+		/* NUEVO: contenedor para scroll horizontal de tablas */
+		.table-scroll {
+			overflow-x: auto;
+			-webkit-overflow-scrolling: touch;
+			border-radius: 8px;
+		}
+		/* NUEVO: ancho mínimo para que la tabla pueda desplazarse en móvil */
+		table {
+			/* ...existing code... */
+			min-width: 900px; /* asegura scroll horizontal en pantallas angostas */
+		}
+
+		/* NUEVO: filtros en línea que se adaptan en móvil */
+		#orders-section .small.filters {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px;
+			align-items: center;
+		}
+
+		/* NUEVO: celda de acciones adaptable */
+		td.actions {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 6px;
+		}
+		td.actions button,
+		td.actions select {
+			margin-right: 0; /* anula margen previo para usar gap */
+			margin-bottom: 0;
+		}
+
+		/* NUEVO: mejoras modales en pantallas pequeñas/medianas */
+		.modal .panel{
+			/* ...existing code... */
+			max-height: 90vh;
+			overflow: auto;
+		}
+
+		/* NUEVO: mejoras generales responsivas */
+		.header{
+			/* ...existing code... */
+			flex-wrap: wrap;
+			align-items: flex-start;
+			gap: 10px;
+		}
+		.controls{
+			/* ...existing code... */
+			flex-wrap: wrap;
+		}
+
+		/* NUEVO: media queries suaves */
+		@media (max-width: 800px){
+			/* Sidebar ya se oculta con tu regla existente */
+
+			/* Cabecera y botones */
+			.header{flex-direction: column;}
+			button.btn{min-height: 40px}
+
+			/* Formularios */
+			.form-row{flex-direction: column}
+			.form-row input, .form-row textarea, .form-row select{width:100%}
+
+			/* Tabla más compacta */
+			table{font-size: 12px}
+			th,td{padding:6px 8px}
+
+			/* Imágenes un poco más pequeñas */
+			.image-preview{width:80px;height:80px}
+		}
+
+		@media (max-width: 480px){
+			/* Tabla aún más compacta */
+			table{font-size: 11px; min-width: 700px}
+			th,td{padding:6px}
+
+			/* Botones cómodos al tacto */
+			button.btn{min-height:44px;font-size:14px}
+
+			/* Vista previa imágenes en muy pequeño */
+			.image-preview{width:64px;height:64px}
+		}
+
+		/* NUEVO: estilos mínimos para inventario */
+		#inventory-section .controls { display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+		#inventory-section .controls input { padding:6px;border-radius:6px;background:#052026;border:1px solid rgba(255,255,255,.04);color:#dfeef2 }
+		.badge-cat{display:inline-block;padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.08);font-size:12px;color:#cfe6f3}
+
+		/* NUEVO: estilos para facturas */
+		#invoices-section .controls { display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+		.invoice-items-list { margin-top:12px; padding:10px; background:#031419; border-radius:6px }
+		.invoice-item-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; padding:8px; background:#051820; border-radius:4px }
+		.invoice-item-row input, .invoice-item-row select { flex:1; padding:6px; border-radius:4px; background:#062028; border:1px solid rgba(255,255,255,.04); color:#dfeef2 }
+		.invoice-item-row .small { flex:1; color:var(--muted) }
+		.invoice-total { text-align:right; font-size:16px; font-weight:700; color:var(--accent); margin-top:12px; padding:10px; background:#051820; border-radius:6px }
+		.badge-status-paid { background:#7af0a5; color:#07121a; padding:4px 8px; border-radius:10px; font-size:12px; font-weight:600 }
+		.badge-status-unpaid { background:#ff5b6b; color:#fff; padding:4px 8px; border-radius:10px; font-size:12px; font-weight:600 }
+		.badge-status-partial { background:#ffcc33; color:#07121a; padding:4px 8px; border-radius:10px; font-size:12px; font-weight:600 }
+
+		/* NUEVO: estilos para login */
+		#login-screen {
+			position: fixed;
+			inset: 0;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			background: linear-gradient(135deg, #0a1420, #051015);
+			z-index: 9999;
+		}
+		#login-screen.hidden { display: none; }
+		.login-container {
+			background: linear-gradient(180deg, #071722, #06121a);
+			padding: 40px;
+			border-radius: 12px;
+			box-shadow: 0 8px 32px rgba(0,0,0,.6);
+			width: 100%;
+			max-width: 380px;
+			border: 1px solid rgba(255,255,255,.05);
+		}
+		.login-logo {
+			text-align: center;
+			margin-bottom: 30px;
+		}
+		.login-logo h1 {
+			color: var(--accent);
+			font-size: 28px;
+			margin: 0;
+			font-weight: 700;
+		}
+		.login-logo p {
+			color: var(--muted);
+			font-size: 14px;
+			margin: 8px 0 0 0;
+		}
+		.login-form {
+			display: flex;
+			flex-direction: column;
+			gap: 16px;
+		}
+		.login-form input {
+			padding: 12px 16px;
+			border-radius: 8px;
+			border: 1px solid rgba(255,255,255,.08);
+			background: #051417;
+			color: #eaf6f3;
+			font-size: 14px;
+			transition: border-color .2s;
+		}
+		.login-form input:focus {
+			outline: none;
+			border-color: var(--accent);
+		}
+		.login-form button {
+			background: var(--accent);
+			color: #07121a;
+			border: 0;
+			padding: 12px;
+			border-radius: 8px;
+			cursor: pointer;
+			font-size: 16px;
+			font-weight: 600;
+			transition: transform .2s;
+		}
+		.login-form button:hover {
+			transform: translateY(-2px);
+		}
+		.login-form button:active {
+			transform: translateY(0);
+		}
+		.login-error {
+			color: #ff5b6b;
+			font-size: 13px;
+			text-align: center;
+			display: none;
+		}
+
+		/* Dashboard & Charts Styles */
+		.dashboard-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+			gap: 20px;
+			margin-bottom: 24px;
+		}
+		.stat-card {
+			background: linear-gradient(135deg, var(--panel), var(--card));
+			border-radius: 12px;
+			padding: 24px;
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+			border: 1px solid rgba(59, 180, 255, 0.1);
+			transition: transform 0.2s, box-shadow 0.2s;
+		}
+		.stat-card:hover {
+			transform: translateY(-4px);
+			box-shadow: 0 6px 20px rgba(199, 255, 0, 0.15);
+		}
+		.stat-card-header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			margin-bottom: 16px;
+		}
+		.stat-card-icon {
+			font-size: 32px;
+			opacity: 0.9;
+		}
+		.stat-card-title {
+			font-size: 13px;
+			color: var(--muted);
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+			font-weight: 600;
+		}
+		.stat-card-value {
+			font-size: 36px;
+			font-weight: 700;
+			color: var(--accent);
+			margin: 8px 0;
+		}
+		.stat-card-subtitle {
+			font-size: 12px;
+			color: var(--muted);
+			margin-top: 8px;
+		}
+		.stat-trend {
+			display: inline-flex;
+			align-items: center;
+			gap: 4px;
+			font-size: 13px;
+			font-weight: 600;
+			padding: 4px 8px;
+			border-radius: 4px;
+			margin-top: 8px;
+		}
+		.stat-trend.up {
+			background: rgba(122, 240, 165, 0.15);
+			color: #7af0a5;
+		}
+		.stat-trend.down {
+			background: rgba(255, 107, 107, 0.15);
+			color: #ff6b6b;
+		}
+		.chart-container {
+			background: var(--panel);
+			border-radius: 12px;
+			padding: 24px;
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+			border: 1px solid rgba(59, 180, 255, 0.1);
+			margin-bottom: 20px;
+		}
+		.chart-container h4 {
+			margin: 0 0 20px 0;
+			color: var(--accent);
+			font-size: 18px;
+			font-weight: 600;
+		}
+		.chart-wrapper {
+			position: relative;
+			height: 300px;
+		}
+		.charts-row {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+			gap: 20px;
+			margin-top: 24px;
+		}
+		.login-error.show {
+			display: block;
+		}
+
+		/* ============================================
+		   ESTILOS PARA VISTA DE TARJETAS EN MÓVIL
+		   ============================================ */
+		
+		.orders-cards-container {
+			display: none; /* Oculto por defecto */
+			flex-direction: column;
+			gap: 15px;
+			margin-top: 15px;
+		}
+		
+		.order-card {
+			background: linear-gradient(135deg, #071722, #06121a);
+			border-radius: 12px;
+			padding: 16px;
+			box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+			border: 1px solid rgba(255,255,255,0.05);
+			position: relative;
+		}
+		
+		.order-card-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: flex-start;
+			margin-bottom: 12px;
+			padding-bottom: 12px;
+			border-bottom: 1px solid rgba(255,255,255,0.08);
+		}
+		
+		.order-card-id {
+			font-size: 18px;
+			font-weight: bold;
+			color: var(--accent);
+		}
+		
+		.order-card-status {
+			display: flex;
+			gap: 6px;
+			flex-wrap: wrap;
+			align-items: center;
+		}
+		
+		.order-card-body {
+			display: grid;
+			gap: 10px;
+			margin-bottom: 12px;
+		}
+		
+		.order-card-row {
+			display: flex;
+			gap: 8px;
+		}
+		
+		.order-card-label {
+			font-weight: 600;
+			color: var(--accent);
+			min-width: 80px;
+			font-size: 13px;
+		}
+		
+		.order-card-value {
+			color: #dfeef2;
+			flex: 1;
+			font-size: 14px;
+			word-break: break-word;
+		}
+		
+		.order-card-actions {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 8px;
+			margin-top: 12px;
+			padding-top: 12px;
+			border-top: 1px solid rgba(255,255,255,0.08);
+		}
+		
+		.order-card-actions button {
+			min-height: 42px;
+			font-size: 13px;
+			padding: 10px;
+		}
+		
+		.order-card-actions select {
+			min-height: 42px;
+			font-size: 13px;
+			padding: 8px;
+			border-radius: 6px;
+			background: #052026;
+			border: 1px solid rgba(255,255,255,0.1);
+			color: #dfeef2;
+			grid-column: span 2;
+		}
+
+		/* Estilos para tarjetas genéricas (clientes, facturas, inventario, finanzas) */
+		.cards-container {
+			display: none;
+			flex-direction: column;
+			gap: 15px;
+			margin-top: 15px;
+		}
+		
+		.data-card {
+			background: linear-gradient(135deg, #071722, #06121a);
+			border-radius: 12px;
+			padding: 16px;
+			box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+			border: 1px solid rgba(255,255,255,0.05);
+			position: relative;
+		}
+		
+		.data-card-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: flex-start;
+			margin-bottom: 12px;
+			padding-bottom: 12px;
+			border-bottom: 1px solid rgba(255,255,255,0.08);
+		}
+		
+		.data-card-title {
+			font-size: 18px;
+			font-weight: bold;
+			color: var(--accent);
+		}
+		
+		.data-card-subtitle {
+			font-size: 13px;
+			color: var(--muted);
+			margin-top: 4px;
+		}
+		
+		.data-card-body {
+			display: grid;
+			gap: 10px;
+			margin-bottom: 12px;
+		}
+		
+		.data-card-row {
+			display: flex;
+			gap: 8px;
+		}
+		
+		.data-card-label {
+			font-weight: 600;
+			color: var(--accent);
+			min-width: 80px;
+			font-size: 13px;
+		}
+		
+		.data-card-value {
+			color: #dfeef2;
+			flex: 1;
+			font-size: 14px;
+			word-break: break-word;
+		}
+		
+		.data-card-actions {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 8px;
+			margin-top: 12px;
+			padding-top: 12px;
+			border-top: 1px solid rgba(255,255,255,0.08);
+		}
+		
+		.data-card-actions button {
+			min-height: 42px;
+			font-size: 13px;
+			padding: 10px;
+		}
+
+		/* ============================================
+		   MEJORAS RESPONSIVE PARA MÓVILES
+		   ============================================ */
+		
+	/* Ocultar sidebar en móviles y agregar menú hamburguesa */
+	@media (max-width: 768px) {
+		/* Mostrar tarjetas y ocultar tablas en móvil para todas las secciones */
+		#orders-section .table-scroll,
+		#clients-section .table-scroll,
+		#invoices-section .table-scroll,
+		#inventory-section .table-scroll,
+		#finance-section .table-scroll {
+			display: none !important;
+		}
+		
+		.orders-cards-container,
+		.cards-container {
+			display: flex !important;
+		}			/* Sidebar oculto por defecto */
+			.sidebar {
+				position: fixed;
+				left: -260px;
+				top: 0;
+				bottom: 0;
+				width: 240px;
+				z-index: 1000;
+				transition: left 0.3s ease;
+			}
+			
+			.sidebar.show-mobile {
+				left: 0;
+			}
+			
+			/* Overlay para cerrar el menú */
+			.sidebar-overlay {
+				display: none;
+				position: fixed;
+				inset: 0;
+				background: rgba(0,0,0,0.5);
+				z-index: 999;
+			}
+			
+			.sidebar-overlay.show {
+				display: block;
+			}
+			
+			/* Botón hamburguesa */
+			.mobile-menu-btn {
+				display: block;
+				position: fixed;
+				top: 15px;
+				left: 15px;
+				z-index: 998;
+				background: var(--accent);
+				color: #07121a;
+				border: 0;
+				padding: 10px 14px;
+				border-radius: 8px;
+				cursor: pointer;
+				font-size: 20px;
+				box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+			}
+			
+			/* Main ocupa todo el ancho */
+			.main {
+				padding: 70px 15px 15px 15px;
+				width: 100%;
+			}
+			
+			/* Header más compacto */
+			.header {
+				flex-direction: column;
+				align-items: stretch;
+				gap: 12px;
+			}
+			
+			.header h2 {
+				font-size: 20px;
+				margin: 0;
+			}
+			
+			/* Controles en columna */
+			.controls {
+				flex-direction: column;
+				align-items: stretch;
+			}
+			
+			/* Botones más grandes para facilitar el toque */
+			button.btn {
+				min-height: 48px;
+				font-size: 15px;
+				padding: 12px 16px;
+				width: 100%;
+			}
+			
+			/* Tablas con scroll horizontal */
+			.table-scroll {
+				margin: 0 -15px;
+				padding: 0 15px;
+			}
+			
+			table {
+				font-size: 13px;
+			}
+			
+			th, td {
+				padding: 10px 8px;
+				font-size: 13px;
+			}
+			
+			/* Acciones en columna para mejor visualización */
+			td.actions {
+				flex-direction: column;
+				align-items: stretch;
+			}
+			
+			td.actions button {
+				width: 100%;
+				margin: 3px 0;
+			}
+			
+			/* Modal adaptado */
+			.modal .panel {
+				width: calc(100% - 30px);
+				max-width: 500px;
+				max-height: 85vh;
+				margin: 15px;
+			}
+			
+			/* Formularios en columna */
+			.form-row {
+				flex-direction: column;
+			}
+			
+			.form-row input,
+			.form-row textarea,
+			.form-row select {
+				width: 100%;
+				font-size: 16px; /* Evita zoom automático en iOS */
+				min-height: 44px;
+			}
+			
+			/* Badges más grandes */
+			.status-badge,
+			.payment-badge,
+			.badge-status-paid,
+			.badge-status-unpaid,
+			.badge-status-partial {
+				font-size: 13px;
+				padding: 6px 10px;
+			}
+			
+			/* Filtros adaptables */
+			#orders-section .small.filters {
+				flex-direction: column;
+				align-items: stretch;
+			}
+			
+			#orders-section .small.filters select,
+			#orders-section .small.filters input {
+				width: 100%;
+				min-height: 44px;
+				font-size: 15px;
+			}
+			
+			/* Items de factura adaptables */
+			.invoice-item-row {
+				flex-direction: column;
+				gap: 10px;
+			}
+			
+			.invoice-item-row input,
+			.invoice-item-row select {
+				width: 100%;
+				min-height: 44px;
+				font-size: 15px;
+			}
+			
+			/* Galería de imágenes más grande en móvil */
+			.image-preview {
+				width: 100px;
+				height: 100px;
+			}
+			
+			/* Cards más espaciados */
+			.card {
+				padding: 16px;
+				margin-bottom: 12px;
+			}
+			
+			/* Historial modal más alto */
+			.history-list {
+				max-height: 400px;
+			}
+			
+			/* Login responsive */
+			.login-container {
+				width: calc(100% - 40px);
+				padding: 30px 20px;
+			}
+
+			/* Dashboard responsive */
+			.dashboard-grid {
+				grid-template-columns: 1fr;
+				gap: 15px;
+			}
+			.charts-row {
+				grid-template-columns: 1fr;
+				gap: 15px;
+			}
+			.chart-wrapper {
+				height: 250px;
+			}
+			.stat-card-value {
+				font-size: 28px;
+			}
+		}
+		
+		/* Mejoras adicionales para pantallas muy pequeñas */
+		@media (max-width: 480px) {
+			.main {
+				padding: 65px 10px 10px 10px;
+			}
+			
+			table {
+				font-size: 12px;
+				min-width: 650px;
+			}
+			
+			th, td {
+				padding: 8px 6px;
+				font-size: 12px;
+			}
+			
+			.header h2 {
+				font-size: 18px;
+			}
+			
+			.modal .panel {
+				width: calc(100% - 20px);
+				margin: 10px;
+				padding: 15px;
+			}
+			
+			/* Textos más pequeños pero legibles */
+			.small {
+				font-size: 12px;
+			}
+			
+			/* Botones de acciones más compactos en tablas */
+			td.actions button {
+				font-size: 12px;
+				padding: 8px;
+				min-height: 36px;
+			}
+		}
+		
+		/* Mejoras para tablets (pantallas medianas) */
+		@media (min-width: 769px) and (max-width: 1024px) {
+			.sidebar {
+				width: 200px;
+			}
+			
+			.main {
+				padding: 18px;
+			}
+			
+			table {
+				font-size: 13px;
+			}
+			
+			th, td {
+				padding: 8px;
+			}
+			
+			.modal .panel {
+				width: 90%;
+				max-width: 700px;
+			}
+		}
+		
+		/* Ocultar botón hamburguesa en desktop */
+		@media (min-width: 769px) {
+			.mobile-menu-btn {
+				display: none;
+			}
+		}
+	</style>
+</head>
+<body>
+	<!-- NUEVO: pantalla de login -->
+	<div id="login-screen">
+		<div class="login-container">
+			<div class="login-logo">
+				<h1>🔧 MIPC</h1>
+				<p>Sistema de Gestión</p>
+			</div>
+			<form class="login-form" id="login-form">
+				<input type="text" id="login-username" placeholder="Usuario" autocomplete="username" required>
+				<input type="password" id="login-password" placeholder="Contraseña" autocomplete="current-password" required>
+				<div class="login-error" id="login-error">Usuario o contraseña incorrectos</div>
+				<button type="submit">Iniciar Sesión</button>
+			</form>
+		</div>
+	</div>
+
+	<!-- Botón menú móvil -->
+	<button class="mobile-menu-btn" id="mobile-menu-btn">☰</button>
+	
+	<!-- Overlay para cerrar menú móvil -->
+	<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+	<div class="app">
+		<aside class="sidebar card" id="sidebar">
+			<div class="brand">Mipc Computadores</div>
+			<ul class="menu">
+				<li class="active" data-view="dashboard">Dashboard</li>
+				<li data-view="orders">Órdenes</li>
+				<li data-view="clients">Clientes</li>
+				<li data-view="invoices">Facturas</li> <!-- NUEVO -->
+				<li data-view="finance">Finanzas</li>
+				<li data-view="inventory">Inventario</li>
+				<li data-view="settings">Configuración</li>
+			</ul>
+			<button id="btn-logout" style="margin-top:20px;width:100%;background:#ff5b6b;color:#fff;border:0;padding:10px;border-radius:6px;cursor:pointer;font-size:14px">Cerrar Sesión</button>
+		</aside>
+
+		<main class="main">
+			<div class="header">
+				<h2 id="view-title">Dashboard</h2>
+				<div class="controls">
+					<button class="btn" id="btn-add-order">+ Nueva orden</button>
+					<button class="btn" id="btn-add-client" style="display:none;background:#3bb4ff;color:#04121a">+ Nuevo cliente</button>
+					<span id="conn-status" class="small" style="margin-left:8px">Conectando…</span>
+				</div>
+			</div>
+
+			<!-- SECCIÓN DASHBOARD -->
+			<section id="dashboard-section" class="card">
+				<div class="dashboard-grid">
+					<!-- Tarjeta 1: Total de Órdenes -->
+					<div class="stat-card">
+						<div class="stat-card-header">
+							<div>
+								<div class="stat-card-title">Total Órdenes</div>
+								<div class="stat-card-value" id="stat-total-orders">0</div>
+								<div class="stat-card-subtitle">Órdenes registradas</div>
+							</div>
+							<div class="stat-card-icon">📋</div>
+						</div>
+						<div class="stat-trend up" id="stat-orders-trend">
+							<span>↑ 0%</span> vs. mes anterior
+						</div>
+					</div>
+
+					<!-- Tarjeta 2: Órdenes Pendientes -->
+					<div class="stat-card">
+						<div class="stat-card-header">
+							<div>
+								<div class="stat-card-title">Órdenes Activas</div>
+								<div class="stat-card-value" id="stat-active-orders" style="color:#3bb4ff">0</div>
+								<div class="stat-card-subtitle">En proceso</div>
+							</div>
+							<div class="stat-card-icon">⚙️</div>
+						</div>
+						<div class="stat-card-subtitle" id="stat-active-breakdown">
+							0 ingresadas • 0 en reparación • 0 en espera
+						</div>
+					</div>
+
+					<!-- Tarjeta 3: Ingresos Totales -->
+					<div class="stat-card">
+						<div class="stat-card-header">
+							<div>
+								<div class="stat-card-title">Ingresos del Mes</div>
+								<div class="stat-card-value" id="stat-income" style="color:#7af0a5">$0</div>
+								<div class="stat-card-subtitle">Balance positivo</div>
+							</div>
+							<div class="stat-card-icon">💰</div>
+						</div>
+						<div class="stat-trend up" id="stat-income-trend">
+							<span>↑ 0%</span> vs. mes anterior
+						</div>
+					</div>
+
+					<!-- Tarjeta 4: Inventario -->
+					<div class="stat-card">
+						<div class="stat-card-header">
+							<div>
+								<div class="stat-card-title">Valor Inventario</div>
+								<div class="stat-card-value" id="stat-inventory" style="color:#ffcc33">$0</div>
+								<div class="stat-card-subtitle">En stock</div>
+							</div>
+							<div class="stat-card-icon">📦</div>
+						</div>
+						<div class="stat-card-subtitle" id="stat-inventory-items">
+							0 ítems • 0 unidades
+						</div>
+					</div>
+				</div>
+
+				<!-- Gráficos -->
+				<div class="charts-row">
+					<!-- Gráfico de órdenes por estado -->
+					<div class="chart-container">
+						<h4>📊 Órdenes por Estado</h4>
+						<div class="chart-wrapper">
+							<canvas id="ordersStatusChart"></canvas>
+						</div>
+					</div>
+
+					<!-- Gráfico de ingresos vs gastos -->
+					<div class="chart-container">
+						<h4>💵 Ingresos vs Gastos (Últimos 7 días)</h4>
+						<div class="chart-wrapper">
+							<canvas id="financialChart"></canvas>
+						</div>
+					</div>
+				</div>
+
+				<!-- Gráfico de línea: Órdenes en el tiempo -->
+				<div class="chart-container">
+					<h4>📈 Órdenes Mensuales (Últimos 6 meses)</h4>
+					<div class="chart-wrapper" style="height: 350px">
+						<canvas id="ordersTimelineChart"></canvas>
+					</div>
+				</div>
+
+				<!-- Productos más movidos -->
+				<div class="chart-container">
+					<h4>🔥 Top 5 Productos Más Vendidos</h4>
+					<div class="chart-wrapper">
+						<canvas id="topProductsChart"></canvas>
+					</div>
+				</div>
+			</section>
+
+			<section id="orders-section" class="card" style="display:none">
+				<div class="small filters">
+					Filtrar:
+					<input id="filter-input" placeholder="buscar por cliente, serie o modelo" style="margin-left:8px;padding:6px;border-radius:6px;background:#052026;border:1px solid rgba(255,255,255,.04);color:#dfeef2">
+					<!-- nuevo: filtro por estado -->
+					<select id="status-filter" style="margin-left:8px;padding:6px;border-radius:6px;background:#052026;border:1px solid rgba(255,255,255,.04);color:#dfeef2">
+						<option value="">Todos los estados</option>
+						<option value="ingresado">Ingresado</option>
+						<option value="en_reparacion">En reparación</option>
+						<option value="espera_entrega">En espera de entrega</option>
+						<option value="entregado">Entregado</option>
+					</select>
+					<!-- nuevo: filtro por estado de pago -->
+					<select id="payment-filter" style="margin-left:8px;padding:6px;border-radius:6px;background:#052026;border:1px solid rgba(255,255,255,.04);color:#dfeef2">
+						<option value="">Todos (pagos)</option>
+						<option value="paid">Pagadas</option>
+						<option value="unpaid">No pagadas</option>
+					</select>
+				</div>
+
+				<!-- NUEVO: envoltorio con scroll horizontal -->
+				<div class="table-scroll">
+					<table id="orders-table" aria-label="Órdenes">
+						<thead>
+							<tr>
+								<th>ID</th><th>Cliente</th><th>Marca</th><th>Modelo</th><th>Serie</th><th>Accesorios</th><th>Falla</th>
+								<th>Estado</th><th>Precio</th><th>Pago</th><th>Imágenes</th><th>Técnico</th><th>Fecha</th><th>Acciones</th>
+							</tr>
+						</thead>
+						<tbody>
+							<!-- filas generadas por JS -->
+						</tbody>
+			</table>
+		</div>
+		
+		<!-- NUEVO: Vista de tarjetas para móvil -->
+		<div class="orders-cards-container" id="orders-cards-container">
+			<!-- Tarjetas generadas por JS -->
+		</div>
+		
+		<div class="footer-note" id="orders-count"></div>
+	</section>			<section id="clients-section" class="card" style="display:none;margin-top:12px">
+				<h3>Clientes</h3>
+				<button class="btn" id="btn-new-client-inline" style="margin-bottom:8px">+ Nuevo cliente</button>
+				<!-- NUEVO: envoltorio con scroll horizontal -->
+				<div class="table-scroll">
+			<table id="clients-table">
+				<thead><tr><th>ID</th><th>Nombre</th><th>Cédula</th><th>Teléfono</th><th>Email</th><th>Acciones</th></tr></thead>
+				<tbody></tbody>
+			</table>
+		</div>
+		
+		<!-- Vista de tarjetas para móvil -->
+		<div class="cards-container" id="clients-cards-container">
+			<!-- Tarjetas generadas por JS -->
+		</div>
+	</section>			<!-- Nueva sección: Finanzas -->
+			<section id="finance-section" class="card" style="display:none;margin-top:12px">
+				<h3>Finanzas</h3>
+				<!-- Panel métricas -->
+				<div id="finance-metrics" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+					<!-- contenido poblado por JS -->
+				</div>
+				<!-- pequeño ajuste: permitir wrap en controles -->
+				<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+					<button class="btn" id="btn-new-transaction">+ Nueva transacción</button>
+					<div id="finance-summary" class="small" style="margin-left:12px">Cargando...</div>
+					<!-- filtros: tipo y categoría -->
+					<select id="type-filter" style="margin-left:12px;padding:6px;border-radius:6px;background:#052026;border:1px solid rgba(255,255,255,.04);color:#dfeef2">
+						<option value="">Todos</option>
+						<option value="income">Ingresos</option>
+						<option value="expense">Gastos</option>
+					</select>
+					<select id="category-filter" style="margin-left:8px;padding:6px;border-radius:6px;background:#052026;border:1px solid rgba(255,255,255,.04);color:#dfeef2">
+						<option value="">Todas las categorías</option>
+						<!-- opciones pobladas por JS -->
+					</select>
+				</div>
+				<!-- Formulario inline para nueva transacción -->
+				<form id="form-transaction" style="display:block;margin-bottom:8px;gap:8px">
+					<div class="form-row">
+						<select name="type" required>
+							<option value="income">Ingreso</option>
+							<option value="expense">Gasto</option>
+						</select>
+						<input name="amount" type="number" step="0.01" placeholder="Monto" required>
+					</div>
+					<div class="form-row">
+						<select name="category" id="tx-category" required>
+							<!-- opciones pobladas por JS -->
+						</select>
+						<input name="date" type="date" value="">
+					</div>
+					<div class="form-row">
+						<input name="notes" placeholder="Notas" style="flex:2">
+						<button class="btn" type="submit">Guardar</button>
+					</div>
+				</form>
+
+				<!-- NUEVO: envoltorio con scroll horizontal -->
+				<div class="table-scroll">
+			<table id="transactions-table">
+				<thead><tr><th>ID</th><th>Tipo</th><th>Monto</th><th>Categoría</th><th>Fecha</th><th>Notas</th><th>Acciones</th></tr></thead>
+				<tbody></tbody>
+			</table>
+		</div>
+		
+		<!-- Vista de tarjetas para móvil -->
+		<div class="cards-container" id="transactions-cards-container">
+			<!-- Tarjetas generadas por JS -->
+		</div>
+	</section>			<!-- NUEVO: Sección Inventario -->
+			<section id="inventory-section" class="card" style="display:none;margin-top:12px">
+				<h3>Inventario</h3>
+				<div class="controls">
+					<button class="btn" id="btn-new-item">+ Nuevo ítem</button>
+					<input id="inv-filter" placeholder="Buscar por nombre o categoría">
+					<div class="small" id="inventory-summary">Cargando...</div>
+				</div>
+
+				<div class="table-scroll">
+					<table id="inventory-table">
+						<thead>
+							<tr>
+								<th>ID</th>
+								<th>Nombre</th>
+								<th>Categoría</th>
+								<th>Stock</th>
+								<th>Costo u.</th>
+								<th>Precio u.</th>
+								<th>Proveedor</th>
+								<th>Actualizado</th>
+								<th>Acciones</th>
+							</tr>
+						</thead>
+						<tbody></tbody>
+					</table>
+				</div>
+
+				<!-- Vista de tarjetas para móvil -->
+				<div class="cards-container" id="inventory-cards-container">
+					<!-- Tarjetas generadas por JS -->
+				</div>
+			</section>
+
+			<!-- NUEVO: Sección Facturas -->
+			<section id="invoices-section" class="card" style="display:none;margin-top:12px">
+			<h3>Facturas</h3>
+			<div class="controls">
+				<button class="btn" id="btn-new-invoice">+ Nueva factura</button>
+				<input id="invoice-filter" placeholder="Buscar por cliente o número..." style="padding:10px 15px;border-radius:8px;border:1px solid #3bb4ff;background:#051820;color:#fff;font-size:14px;width:100%;max-width:300px">
+				<div class="small" id="invoices-summary">Cargando...</div>
+			</div>				<div class="table-scroll">
+					<table id="invoices-table">
+						<thead>
+							<tr>
+								<th>Número</th>
+								<th>Cliente</th>
+								<th>Fecha</th>
+								<th>Subtotal</th>
+								<th>IVA</th>
+								<th>Total</th>
+								<th>Estado</th>
+								<th>Acciones</th>
+							</tr>
+						</thead>
+						<tbody></tbody>
+					</table>
+				</div>
+
+				<!-- Vista de tarjetas para móvil -->
+				<div class="cards-container" id="invoices-cards-container">
+					<!-- Tarjetas generadas por JS -->
+				</div>
+			</section>
+
+			<section id="settings-section" class="card" style="display:none;margin-top:12px">
+				<h3>Configuración</h3>
+				<button class="btn" id="export-data">Exportar datos (.json)</button>
+				<button class="btn" id="import-data" style="background:#3bb4ff;color:#04121a">Importar</button>
+				<!-- nuevo: exportar PDF de órdenes -->
+				<button class="btn" id="export-pdf" style="margin-left:8px;background:#7af0a5;color:#04121a">Exportar PDF (Órdenes)</button>
+				<input type="file" id="import-file" accept="application/json" style="display:none">
+				<div class="footer-note" style="margin-top:12px">Equipos guardados en hoja de vida por número de serie.</div>
+			</section>
+		</main>
+	</div>
+
+	<!-- Modal: agregar/editar orden -->
+	<div class="modal" id="modal-order">
+		<div class="panel">
+			<h3 id="modal-order-title">Nueva orden</h3>
+			<form id="form-order">
+				<div class="form-row">
+					<select name="clientId" required>
+						<option value="">-- Seleccionar cliente --</option>
+					</select>
+					<button type="button" class="btn" id="btn-order-new-client" style="background:#64707a">Nuevo cliente</button>
+				</div>
+
+				<!-- nuevo: selector de estado -->
+				<div class="form-row">
+					<select name="status" required>
+						<option value="ingresado">Ingresado</option>
+						<option value="en_reparacion">En reparación</option>
+						<option value="espera_entrega">En espera de entrega</option>
+						<option value="entregado">Entregado</option>
+					</select>
+					<!-- espacio para futuro -->
+					<input name="brand" placeholder="Marca" required>
+				</div>
+
+				<div class="form-row">
+					<input name="serial" placeholder="Número de serie (único)" required>
+					<input name="model" placeholder="Modelo">
+				</div>
+				<div class="form-row">
+					<input name="accessories" placeholder="Accesorios (ej: cargador, funda)">
+					<textarea name="failure" placeholder="Falla reportada" rows="1" required style="flex:2"></textarea>
+				</div>
+
+				<div class="form-row">
+					<input name="technician" placeholder="Técnico asignado">
+					<input name="price" type="number" step="0.01" placeholder="Precio" style="flex:1">
+					<!-- nuevo: selector de estado de pago -->
+					<select name="paid" style="flex:1">
+						<option value="false">No pagado</option>
+						<option value="true">Pagado</option>
+					</select>
+				</div>
+
+				<div class="form-row">
+					<input name="notes" placeholder="Notas internas" style="flex:1">
+				</div>
+
+				<!-- nuevo: campo para imágenes -->
+			<div class="form-row" style="flex-direction:column;align-items:flex-start">
+				<label style="color:var(--muted);font-size:13px;margin-bottom:4px">
+					Imágenes del equipo: 
+					<span id="image-count" style="color:var(--accent);font-weight:600">(0 imágenes)</span>
+				</label>
+				<div style="display:flex;gap:8px;flex-wrap:wrap;width:100%">
+					<button type="button" id="btn-take-photo" class="btn" style="background:#3bb4ff;color:#05121a;flex:1;min-width:150px">
+						📷 Tomar Foto
+					</button>
+					<button type="button" id="btn-choose-gallery" class="btn" style="background:#9c27b0;color:#fff;flex:1;min-width:150px">
+						🖼️ Galería
+					</button>
+				</div>
+				<input type="file" id="order-images-camera" accept="image/*" capture="environment" multiple style="display:none">
+				<input type="file" id="order-images-gallery" accept="image/*" multiple style="display:none">
+				<div id="image-preview-container" class="image-preview-container"></div>
+			</div>				<div style="display:flex;gap:8px;justify-content:flex-end">
+					<button type="button" class="btn" id="btn-close-order" style="background:#64707a">Cancelar</button>
+					<button type="submit" class="btn">Guardar orden</button>
+				</div>
+			</form>
+		</div>
+	</div>
+
+	<!-- Modal: cliente -->
+	<div class="modal" id="modal-client">
+		<div class="panel">
+			<h3 id="modal-client-title">Nuevo cliente</h3>
+			<form id="form-client">
+				<!-- cambiado: ahora se pide la cédula -->
+				<div class="form-row">
+					<input name="name" placeholder="Nombre" required>
+					<input name="cedula" placeholder="Cédula" required>
+				</div>
+				<div class="form-row">
+					<input name="phone" placeholder="Teléfono">
+					<input name="email" placeholder="Email">
+				</div>
+				<div class="form-row">
+					<input name="address" placeholder="Dirección">
+				</div>
+				<div style="display:flex;gap:8px;justify-content:flex-end">
+					<button type="button" class="btn" id="btn-close-client" style="background:#64707a">Cancelar</button>
+					<button type="submit" class="btn" style="background:#3bb4ff;color:#04121a">Guardar</button>
+				</div>
+			</form>
+		</div>
+	</div>
+
+	<!-- Modal: equipo / hoja de vida -->
+	<div class="modal" id="modal-equipment">
+		<div class="panel">
+			<h3 id="modal-equipment-title">Hoja de vida - Equipo</h3>
+			<div class="history-list" id="equipment-history"></div>
+			<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+				<button type="button" class="btn" id="btn-close-equipment" style="background:#64707a">Cerrar</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- NUEVO: Modal ítem de inventario -->
+	<div class="modal" id="modal-inventory-item">
+		<div class="panel">
+			<h3 id="modal-inventory-title">Nuevo ítem</h3>
+			<form id="form-inventory-item">
+				<div class="form-row">
+					<input name="name" placeholder="Nombre" required>
+					<input name="category" placeholder="Categoría">
+				</div>
+				<div class="form-row">
+					<input name="stock" type="number" step="1" min="0" placeholder="Stock inicial" value="0">
+					<input name="unitCost" type="number" step="0.01" placeholder="Costo unitario">
+					<input name="unitPrice" type="number" step="0.01" placeholder="Precio unitario">
+				</div>
+				<div class="form-row">
+					<input name="supplier" placeholder="Proveedor">
+					<input name="notes" placeholder="Notas" style="flex:2">
+				</div>
+				<div style="display:flex;gap:8px;justify-content:flex-end">
+					<button type="button" class="btn" id="btn-close-inventory-item" style="background:#64707a">Cancelar</button>
+					<button type="submit" class="btn">Guardar</button>
+				</div>
+			</form>
+		</div>
+	</div>
+
+	<!-- NUEVO: Modal movimiento (entrada/salida) -->
+	<div class="modal" id="modal-movement">
+		<div class="panel">
+			<h3 id="modal-movement-title">Registrar movimiento</h3>
+			<form id="form-movement">
+				<input type="hidden" name="itemId">
+				<input type="hidden" name="type"> <!-- in | out -->
+				<div class="form-row">
+					<input name="qty" type="number" step="1" min="1" placeholder="Cantidad" required>
+					<input name="unitValue" type="number" step="0.01" placeholder="Valor unitario">
+				</div>
+				<div class="form-row">
+					<input name="notes" placeholder="Notas">
+					<input name="date" type="date">
+				</div>
+				<div style="display:flex;gap:8px;justify-content:flex-end">
+					<button type="button" class="btn" id="btn-close-movement" style="background:#64707a">Cancelar</button>
+					<button type="submit" class="btn">Registrar</button>
+				</div>
+				<div class="small" id="movement-hint" style="margin-top:6px;color:#9aa5b1"></div>
+			</form>
+		</div>
+	</div>
+
+	<!-- NUEVO: Modal historial de movimientos -->
+	<div class="modal" id="modal-movements-history">
+		<div class="panel">
+			<h3 id="modal-movements-title">Historial de movimientos</h3>
+			<div class="history-list" id="movements-history"></div>
+			<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+				<button type="button" class="btn" id="btn-close-movements" style="background:#64707a">Cerrar</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- NUEVO: Modal crear/editar factura -->
+	<div class="modal" id="modal-invoice">
+		<div class="panel" style="max-width:800px;width:90%">
+			<h3 id="modal-invoice-title">Nueva factura</h3>
+			<form id="form-invoice">
+				<div class="form-row">
+					<select name="clientId" required>
+						<option value="">-- Seleccionar cliente --</option>
+					</select>
+					<input name="invoiceNumber" placeholder="Número de factura (auto)" readonly style="background:#031419">
+				</div>
+				<div class="form-row">
+					<input name="date" type="date" required>
+					<select name="paymentStatus">
+						<option value="unpaid">No pagada</option>
+						<option value="partial">Pago parcial</option>
+						<option value="paid">Pagada</option>
+					</select>
+				</div>
+				<div class="form-row" style="align-items:center;background:rgba(59,180,255,.05);padding:10px;border-radius:6px;border:1px solid rgba(59,180,255,.15)">
+					<label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;user-select:none">
+						<input type="checkbox" name="registerInFinance" id="registerInFinance" checked style="width:auto;cursor:pointer;transform:scale(1.2)">
+						<span style="font-size:13px">💰 Registrar como ingreso en Finanzas <span class="small">(solo si está pagada)</span></span>
+					</label>
+				</div>
+				<div class="form-row">
+					<textarea name="notes" placeholder="Notas (opcional)" rows="2"></textarea>
+				</div>
+
+				<!-- Ítems de la factura -->
+				<div style="margin-top:12px">
+					<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+						<strong>Ítems de la factura</strong>
+						<button type="button" class="btn" id="btn-add-invoice-item" style="background:#3bb4ff;color:#04121a;font-size:12px;padding:6px 10px">+ Agregar ítem</button>
+					</div>
+					<div class="invoice-items-list" id="invoice-items-list">
+						<!-- ítems dinámicos -->
+					</div>
+				</div>
+
+				<!-- Totales -->
+				<div style="margin-top:12px;padding:10px;background:#051820;border-radius:6px">
+					<div style="display:flex;justify-content:space-between;margin-bottom:4px">
+						<span>Subtotal:</span>
+						<span id="invoice-subtotal">$0.00</span>
+					</div>
+					<div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;color:var(--accent);padding-top:8px;border-top:1px solid rgba(255,255,255,.1)">
+						<span>Total:</span>
+						<span id="invoice-total">$0.00</span>
+					</div>
+				</div>
+
+				<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+					<button type="button" class="btn" id="btn-close-invoice" style="background:#64707a">Cancelar</button>
+					<button type="submit" class="btn">Guardar factura</button>
+				</div>
+			</form>
+		</div>
+	</div>
+
+	<!-- incluir jsPDF desde CDN -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+	<script>
+		// NUEVO: Sistema de autenticación
+		const AUTH_USERS = {
+			'admin': 'admin12354',
+			'mipc': 'MiPc2024.'
+		};
+
+		function checkAuth() {
+			const isAuthenticated = sessionStorage.getItem('authenticated');
+			return isAuthenticated === 'true';
+		}
+
+		function login(username, password) {
+			if (AUTH_USERS[username] && AUTH_USERS[username] === password) {
+				sessionStorage.setItem('authenticated', 'true');
+				sessionStorage.setItem('username', username);
+				return true;
+			}
+			return false;
+		}
+
+		function logout() {
+			sessionStorage.removeItem('authenticated');
+			sessionStorage.removeItem('username');
+			location.reload();
+		}
+
+		// Configuración de API - solo Cloudflare
+		const API_BASE = "https://casinos-bunny-edited-officers.trycloudflare.com/api";
+		let API_TIMEOUT_MS = 10000; // 10 segundos timeout por defecto
+		let API_SAVE_TIMEOUT_MS = 30000; // 30 segundos para guardar (imágenes)
+		let MAX_RETRIES = 2; // solo 2 intentos
+		let isOnline = true;
+		let reconnectInterval = null;
+
+		function setOnline(ok){
+			const el = document.getElementById('conn-status');
+			if(!el) return;
+			const wasOffline = !isOnline;
+			isOnline = ok;
+			
+			if(ok){
+				el.textContent = 'Conectado';
+				el.style.color = '#7af0a5';
+				el.title = API_BASE;
+				
+				// Detener reintentos si se reconecta
+				if(reconnectInterval){
+					clearInterval(reconnectInterval);
+					reconnectInterval = null;
+				}
+				
+				// Si acabamos de reconectar, recargar datos
+				if(wasOffline){
+					console.log('Reconectado, recargando datos...');
+					refreshCurrentView();
+				}
+			} else {
+				el.textContent = 'Sin conexión';
+				el.style.color = '#ff6666';
+				
+				// Iniciar reintentos automáticos cada 15 segundos
+				if(!reconnectInterval){
+					reconnectInterval = setInterval(async ()=> {
+						console.log('Intentando reconectar...');
+						await checkConnection();
+					}, 15000);
+				}
+			}
+		}
+
+		// Verificar conexión con un endpoint simple
+		async function checkConnection(){
+			try{
+				const res = await fetchWithTimeout(`${API_BASE}/clients`, { method:'GET' }, 5000);
+				if(res.ok){
+					setOnline(true);
+					return true;
+				}
+			}catch(e){
+				console.warn('Sin conexión:', e.message);
+			}
+			setOnline(false);
+			return false;
+		}
+
+		// helper: fetch con timeout
+		async function fetchWithTimeout(url, options={}, timeoutMs=API_TIMEOUT_MS){
+			const controller = new AbortController();
+			const id = setTimeout(()=> controller.abort(), timeoutMs);
+			try{
+				const res = await fetch(url, { ...options, signal: controller.signal });
+				return res;
+			} finally {
+				clearTimeout(id);
+			}
+		}
+
+		// Intento con reintentos mínimos
+		async function fetchWithRetry(url, options={}, retries=MAX_RETRIES, customTimeout=null){
+			const timeout = customTimeout || API_TIMEOUT_MS;
+			let lastError = null;
+			
+			for(let i = 0; i < retries; i++){
+				try{
+					const res = await fetchWithTimeout(url, options, timeout);
+					if(res.ok) return res;
+					
+					// Si es error del servidor y no es el último intento
+					if(res.status >= 500 && i < retries - 1){
+						console.warn(`Error del servidor (${res.status}), reintentando...`);
+						await sleep(1000);
+						continue;
+					}
+					
+					// Si no es 500 o es el último intento, retornar la respuesta
+					return res;
+				}catch(err){
+					lastError = err;
+					// Solo reintentar una vez más en caso de timeout o error de red
+					if(i < retries - 1){
+						console.warn(`Error de conexión, reintentando (${i+1}/${retries})...`);
+						await sleep(500);
+						continue;
+					}
+				}
+			}
+			
+			// Si llegamos aquí, todos los intentos fallaron
+			throw lastError || new Error('Todos los intentos fallaron');
+		}
+
+		function sleep(ms){ return new Promise(resolve => setTimeout(resolve, ms)); }
+
+		// funciones reutilizables para comunicarse con el backend
+		async function loadTable(table) {
+			try{
+				const res = await fetchWithRetry(`${API_BASE}/${table}`, { method:'GET' });
+				if(!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+				const data = await res.json();
+				setOnline(true);
+				return Array.isArray(data) ? data : [];
+			}catch(err){
+				console.error(`Error cargando ${table}:`, err.message);
+				setOnline(false);
+				return [];
+			}
+		}
+
+		async function saveTable(table, data) {
+			try{
+				console.log(`Guardando ${table}, registros: ${data.length}, con timeout de ${API_SAVE_TIMEOUT_MS}ms`);
+				
+				// Calcular tamaño aproximado de los datos
+				const dataSize = JSON.stringify(data).length;
+				console.log(`Tamaño de datos: ${(dataSize / 1024).toFixed(2)} KB`);
+				
+				// Usar timeout más largo para operaciones de guardado (especialmente con imágenes)
+				const timeout = API_SAVE_TIMEOUT_MS;
+				const res = await fetchWithRetry(`${API_BASE}/${table}`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(data)
+				}, MAX_RETRIES, timeout);
+				
+				if(!res.ok){
+					const errorText = await res.text().catch(() => res.statusText);
+					console.error(`Respuesta del servidor:`, errorText);
+					throw new Error(`Error del servidor (${res.status}): ${errorText}`);
+				}
+				
+				console.log(`✅ ${table} guardado exitosamente`);
+				setOnline(true);
+			}catch(err){
+				console.error(`❌ Error guardando ${table}:`, err);
+				setOnline(false);
+				
+				// Mensaje más específico según el tipo de error
+				if(err.name === 'AbortError' || err.message.includes('timeout')){
+					throw new Error('La conexión tardó demasiado. Por favor intenta de nuevo.');
+				} else if(err.message.includes('Failed to fetch') || err.message.includes('NetworkError')){
+					throw new Error('No se pudo conectar al servidor. Verifica tu conexión a internet.');
+				} else {
+					throw new Error(err.message || 'No se pudo guardar. Intenta de nuevo.');
+				}
+			}
+		}
+
+		// NUEVO: Guardar/actualizar un solo item (más eficiente)
+		async function saveItem(table, item) {
+			try{
+				console.log(`Guardando item individual en ${table}:`, item.id);
+				const itemSize = JSON.stringify(item).length;
+				console.log(`Tamaño del item: ${(itemSize / 1024).toFixed(2)} KB`);
+				
+				const res = await fetchWithRetry(`${API_BASE}/${table}/${item.id}`, {
+					method: 'PUT',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(item)
+				}, MAX_RETRIES, API_SAVE_TIMEOUT_MS);
+				
+				if(!res.ok){
+					const errorText = await res.text().catch(() => res.statusText);
+					throw new Error(`Error del servidor (${res.status}): ${errorText}`);
+				}
+				
+				console.log(`✅ Item guardado en ${table}`);
+				setOnline(true);
+			}catch(err){
+				console.error(`❌ Error guardando item en ${table}:`, err);
+				setOnline(false);
+				throw new Error(err.message || 'No se pudo guardar. Intenta de nuevo.');
+			}
+		}
+
+		// NUEVO: Eliminar un solo item
+		async function deleteItem(table, id) {
+			try{
+				const res = await fetchWithRetry(`${API_BASE}/${table}/${id}`, {
+					method: 'DELETE'
+				}, MAX_RETRIES);
+				
+				if(!res.ok){
+					throw new Error(`Error al eliminar (${res.status})`);
+				}
+				
+				setOnline(true);
+			}catch(err){
+				console.error(`Error eliminando de ${table}:`, err);
+				setOnline(false);
+				throw err;
+			}
+		}
+
+		// Storage helpers (ahora asíncronos y delegan a loadTable/saveTable)
+		async function loadOrders(){ return await loadTable('orders'); }
+		async function saveOrders(list){ await saveTable('orders', list); }
+		// NUEVO: helper para guardar orden individual
+		async function saveOrder(order){ await saveItem('orders', order); }
+		async function deleteOrder_API(id){ await deleteItem('orders', id); }
+		
+		async function loadClients(){ return await loadTable('clients'); }
+		async function saveClients(list){ await saveTable('clients', list); }
+		async function loadEquipments(){ return await loadTable('equipments'); }
+		async function saveEquipments(list){ await saveTable('equipments', list); }
+		async function loadTransactions(){ return await loadTable('transactions'); }
+		async function saveTransactions(list){ await saveTable('transactions', list); }
+		// NUEVO: helpers de inventario (API)
+		async function loadInventory(){ return await loadTable('inventory'); }
+		async function saveInventory(list){ await saveTable('inventory', list); }
+		async function loadInventoryMovements(){ return await loadTable('inventory_movements'); }
+		async function saveInventoryMovements(list){ await saveTable('inventory_movements', list); }
+		// NUEVO: helpers de facturas (API)
+		async function loadInvoices(){ return await loadTable('invoices'); }
+		async function saveInvoices(list){ await saveTable('invoices', list); }
+
+		// Categorías predefinidas para Finanzas
+		const FINANCE_CATEGORIES = ['Servicios','Repuestos','Ventas','Nomina','Otros', 'Inventario']; // NUEVO: 'Inventario'
+
+		// pobla los selects de categoría (#category-filter y #tx-category)
+		async function populateFinanceCategorySelects(){
+			const catSet = new Set(FINANCE_CATEGORIES);
+			try {
+				const tx = await loadTransactions();
+				(tx || []).forEach(t => { if(t && t.category) catSet.add(t.category); });
+			} catch(e){
+				console.warn('No se pudieron leer transacciones para categorías', e);
+			}
+
+			const list = Array.from(catSet);
+			const catFilter = $('#category-filter');
+			const txCat = $('#tx-category');
+			if(catFilter){
+				const selOld = catFilter.value || '';
+				catFilter.innerHTML = '<option value="">Todas las categorías</option>';
+				list.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; catFilter.appendChild(o); });
+				if(selOld) catFilter.value = selOld;
+			}
+			if(txCat){
+				const selOld2 = txCat.value || '';
+				txCat.innerHTML = '';
+				list.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; txCat.appendChild(o); });
+				if(selOld2) txCat.value = selOld2;
+			}
+		}
+
+		// nuevos: estados válidos (clave -> etiqueta)
+		const ORDER_STATUSES = {
+			ingresado: 'Ingresado',
+			en_reparacion: 'En reparación',
+			espera_entrega: 'En espera de entrega',
+			entregado: 'Entregado'
+		};
+
+		// util
+		const $ = sel => document.querySelector(sel);
+		const $$ = sel => Array.from(document.querySelectorAll(sel));
+
+		// estado
+		let editingOrderId = null;
+		let editingClientId = null;
+		// NUEVO: estado inventario
+		let editingItemId = null;
+		let currentMovementItemId = null;
+		let currentMovementType = null; // 'in' | 'out'
+		// NUEVO: estado de facturas
+		let editingInvoiceId = null;
+		let invoiceItems = []; // ítems temporales de la factura actual
+		let currentView = 'orders'; // rastrear vista actual
+
+		// Refrescar la vista actual después de reconectar
+		async function refreshCurrentView(){
+			try{
+				if(currentView === 'orders') await renderOrders();
+				else if(currentView === 'clients') await renderClients();
+				else if(currentView === 'finance'){
+					await populateFinanceCategorySelects();
+					await renderFinance();
+				}
+				else if(currentView === 'inventory') await renderInventory();
+				else if(currentView === 'invoices') await renderInvoices();
+			}catch(e){
+				console.warn('Error al refrescar vista:', e);
+			}
+		}
+
+	// init
+	document.addEventListener('DOMContentLoaded', async ()=> {
+		// NUEVO: Registrar Service Worker para PWA
+		if ('serviceWorker' in navigator) {
+			try {
+				const registration = await navigator.serviceWorker.register('/service-worker.js');
+				console.log('✅ Service Worker registrado:', registration.scope);
+				
+				// Actualizar SW cuando haya una nueva versión
+				registration.addEventListener('updatefound', () => {
+					const newWorker = registration.installing;
+					console.log('🔄 Nueva versión del Service Worker disponible');
+					
+					newWorker.addEventListener('statechange', () => {
+						if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+							// Mostrar notificación de actualización disponible
+							console.log('✨ Actualización lista. Recarga la página para aplicarla.');
+						}
+					});
+				});
+			} catch (err) {
+				console.error('❌ Error al registrar Service Worker:', err);
+			}
+		}
+
+		// NUEVO: Verificar autenticación
+		const loginScreen = document.getElementById('login-screen');
+		const appContainer = document.querySelector('.app');			if (!checkAuth()) {
+				// Mostrar login y ocultar app
+				loginScreen.classList.remove('hidden');
+				appContainer.style.display = 'none';
+				
+				// Manejar submit del formulario
+				const loginForm = document.getElementById('login-form');
+				loginForm.addEventListener('submit', (e) => {
+					e.preventDefault();
+					const username = document.getElementById('login-username').value;
+					const password = document.getElementById('login-password').value;
+					const errorEl = document.getElementById('login-error');
+					
+					if (login(username, password)) {
+						loginScreen.classList.add('hidden');
+						appContainer.style.display = 'flex';
+						initApp();
+					} else {
+						errorEl.classList.add('show');
+						setTimeout(() => errorEl.classList.remove('show'), 3000);
+					}
+				});
+				return; // No inicializar app hasta login exitoso
+			}
+			
+			// Usuario autenticado
+			loginScreen.classList.add('hidden');
+			appContainer.style.display = 'flex';
+			initApp();
+		});
+
+		async function initApp() {
+			bindUI();
+			renderView('dashboard'); // Iniciar en dashboard
+			await renderDashboard(); // Cargar dashboard
+			await renderOrders();
+			await renderClients();
+			await populateFinanceCategorySelects();
+			await renderFinance();
+			await renderInventory();
+			await renderInvoices(); // NUEVO
+			
+			// Verificar conexión al inicio
+			await checkConnection();
+		}
+
+		function bindUI(){
+			// menu
+			$$('.menu li').forEach(li=>{
+				li.addEventListener('click', e=>{
+					$$('.menu li').forEach(x=>x.classList.remove('active'));
+					li.classList.add('active');
+					renderView(li.dataset.view);
+				});
+			});
+
+			// NUEVO: botón de logout
+			const logoutBtn = document.getElementById('btn-logout');
+			if(logoutBtn) {
+				logoutBtn.addEventListener('click', () => {
+					if(confirm('¿Seguro que deseas cerrar sesión?')) {
+						logout();
+					}
+				});
+			}
+
+			$('#btn-add-order').addEventListener('click', ()=> openOrderModal());
+			$('#btn-order-new-client').addEventListener('click', ()=> openClientModal());
+			$('#btn-new-client-inline').addEventListener('click', ()=> openClientModal());
+			$('#btn-add-client').addEventListener('click', ()=> openClientModal());
+
+			$('#btn-close-order').addEventListener('click', ()=> closeModal('#modal-order'));
+			$('#btn-close-client').addEventListener('click', ()=> closeModal('#modal-client'));
+			$('#btn-close-equipment').addEventListener('click', ()=> closeModal('#modal-equipment'));
+			const btnCloseItem = document.getElementById('btn-close-inventory-item');
+			if(btnCloseItem) btnCloseItem.addEventListener('click', ()=> closeModal('#modal-inventory-item'));
+			const btnCloseMove = document.getElementById('btn-close-movement');
+			if(btnCloseMove) btnCloseMove.addEventListener('click', ()=> closeModal('#modal-movement'));
+			const btnCloseMovs = document.getElementById('btn-close-movements');
+			if(btnCloseMovs) btnCloseMovs.addEventListener('click', ()=> closeModal('#modal-movements-history'));
+
+			$('#form-order').addEventListener('submit', async (e)=> await saveOrderFromForm(e));
+			$('#form-client').addEventListener('submit', async (e)=> await saveClientFromForm(e));
+			const formItem = document.getElementById('form-inventory-item');
+			if(formItem) formItem.addEventListener('submit', async (e)=> await saveInventoryItemFromForm(e));
+			const formMove = document.getElementById('form-movement');
+			if(formMove) formMove.addEventListener('submit', async (e)=> await saveMovementFromForm(e));
+
+			// nuevo: manejo de imágenes
+			const btnTakePhoto = $('#btn-take-photo');
+			const btnChooseGallery = $('#btn-choose-gallery');
+			const inputCamera = $('#order-images-camera');
+			const inputGallery = $('#order-images-gallery');
+			
+			if(btnTakePhoto && inputCamera) {
+				btnTakePhoto.addEventListener('click', () => inputCamera.click());
+				inputCamera.addEventListener('change', handleImageUpload);
+			}
+			
+			if(btnChooseGallery && inputGallery) {
+				btnChooseGallery.addEventListener('click', () => inputGallery.click());
+				inputGallery.addEventListener('change', handleImageUpload);
+			}
+
+			$('#filter-input').addEventListener('input', async ()=> await renderOrders());
+			$('#status-filter').addEventListener('change', async ()=> await renderOrders());
+			$('#payment-filter').addEventListener('change', async ()=> await renderOrders()); // nuevo: filtro de pago
+
+			$('#export-data').addEventListener('click', async ()=> await exportData());
+			$('#import-data').addEventListener('click', ()=> $('#import-file').click());
+			$('#import-file').addEventListener('change', async (e)=> await importDataFile(e));
+			// binding para exportar PDF
+			const pdfBtn = $('#export-pdf');
+			if(pdfBtn) pdfBtn.addEventListener('click', async ()=> await exportOrdersPDF());
+
+			// Finanzas: bindings
+			const txBtn = $('#btn-new-transaction');
+			if(txBtn) txBtn.addEventListener('click', ()=> {
+				const form = $('#form-transaction');
+				form.reset();
+				// fecha por defecto hoy
+				const d = new Date().toISOString().slice(0,10);
+				form.querySelector('input[name="date"]').value = d;
+				// seleccionar primera categoría por defecto si existe
+				const catSel = form.querySelector('select[name="category"]');
+				if(catSel && catSel.options.length>0) catSel.selectedIndex = 0;
+				form.querySelector('input[name="amount"]').focus();
+			});
+			const txForm = $('#form-transaction');
+			if(txForm) txForm.addEventListener('submit', async (e)=> await saveTransactionFromForm(e));
+
+			// filtros: recargar render cuando cambian
+			const typeFilter = $('#type-filter');
+			if(typeFilter) typeFilter.addEventListener('change', async ()=> await renderFinance());
+			const catFilter = $('#category-filter');
+			if(catFilter) catFilter.addEventListener('change', async ()=> await renderFinance());
+
+			// NUEVO: bindings inventario
+			const btnNewItem = document.getElementById('btn-new-item');
+			if(btnNewItem) btnNewItem.addEventListener('click', ()=> openInventoryItemModal());
+
+			const invFilter = document.getElementById('inv-filter');
+			if(invFilter) invFilter.addEventListener('input', async ()=> await renderInventory());
+
+			// NUEVO: bindings facturas
+			const btnNewInvoice = document.getElementById('btn-new-invoice');
+			if(btnNewInvoice) btnNewInvoice.addEventListener('click', ()=> openInvoiceModal());
+
+			const btnCloseInvoice = document.getElementById('btn-close-invoice');
+			if(btnCloseInvoice) btnCloseInvoice.addEventListener('click', ()=> closeModal('#modal-invoice'));
+
+			const formInvoice = document.getElementById('form-invoice');
+			if(formInvoice) formInvoice.addEventListener('submit', async (e)=> await saveInvoiceFromForm(e));
+
+			const btnAddInvoiceItem = document.getElementById('btn-add-invoice-item');
+			if(btnAddInvoiceItem) btnAddInvoiceItem.addEventListener('click', ()=> addInvoiceItemRow());
+
+			const invoiceFilter = document.getElementById('invoice-filter');
+			if(invoiceFilter) invoiceFilter.addEventListener('input', async ()=> await renderInvoices());
+
+			// NUEVO: manejar checkbox de finanzas según estado de pago
+			const paymentStatusSelect = formInvoice ? formInvoice.querySelector('select[name="paymentStatus"]') : null;
+			const registerFinanceCheckbox = document.getElementById('registerInFinance');
+			if(paymentStatusSelect && registerFinanceCheckbox){
+				const financeLabel = registerFinanceCheckbox.closest('label');
+				const updateFinanceCheckbox = ()=> {
+					const isPaid = paymentStatusSelect.value === 'paid';
+					registerFinanceCheckbox.disabled = !isPaid;
+					if(financeLabel){
+						financeLabel.style.cursor = isPaid ? 'pointer' : 'not-allowed';
+						financeLabel.style.opacity = isPaid ? '1' : '0.5';
+					}
+					if(!isPaid) registerFinanceCheckbox.checked = false;
+					else registerFinanceCheckbox.checked = true;
+				};
+				paymentStatusSelect.addEventListener('change', updateFinanceCheckbox);
+				updateFinanceCheckbox(); // llamar al inicio
+			}
+
+			// NUEVO: Manejo del menú móvil
+			const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+			const sidebar = document.getElementById('sidebar');
+			const sidebarOverlay = document.getElementById('sidebar-overlay');
+			
+			if(mobileMenuBtn && sidebar && sidebarOverlay) {
+				// Abrir menú
+				mobileMenuBtn.addEventListener('click', () => {
+					sidebar.classList.add('show-mobile');
+					sidebarOverlay.classList.add('show');
+				});
+				
+				// Cerrar menú al hacer clic en overlay
+				sidebarOverlay.addEventListener('click', () => {
+					sidebar.classList.remove('show-mobile');
+					sidebarOverlay.classList.remove('show');
+				});
+				
+				// Cerrar menú al seleccionar una opción
+				const menuItems = sidebar.querySelectorAll('.menu li');
+				menuItems.forEach(item => {
+					item.addEventListener('click', () => {
+						sidebar.classList.remove('show-mobile');
+						sidebarOverlay.classList.remove('show');
+					});
+				});
+			}
+		}
+
+		async function renderView(view){
+			currentView = view; // guardar vista actual
+			$('#view-title').textContent = view === 'dashboard' ? 'Dashboard' : view === 'orders' ? 'Órdenes' : view === 'clients' ? 'Clientes' : view === 'invoices' ? 'Facturas' : view === 'finance' ? 'Finanzas' : view === 'inventory' ? 'Inventario' : 'Configuración';
+			$('#dashboard-section').style.display = view === 'dashboard' ? 'block' : 'none';
+			$('#orders-section').style.display = view === 'orders' ? 'block' : 'none';
+			$('#clients-section').style.display = view === 'clients' ? 'block' : 'none';
+			$('#invoices-section').style.display = view === 'invoices' ? 'block' : 'none'; // NUEVO
+			$('#finance-section').style.display = view === 'finance' ? 'block' : 'none';
+			$('#inventory-section').style.display = view === 'inventory' ? 'block' : 'none';
+			$('#settings-section').style.display = view === 'settings' ? 'block' : 'none';
+			$('#btn-add-client').style.display = view === 'clients' ? 'inline-block' : 'none';
+			
+			// Cargar dashboard cuando se selecciona
+			if(view === 'dashboard') {
+				await renderDashboard();
+			}
+		}
+
+		// Render órdenes (ahora asíncrono)
+		async function renderOrders(){
+			const tbody = $('#orders-table tbody');
+			const filter = $('#filter-input').value.toLowerCase().trim();
+			const statusFilter = $('#status-filter').value;
+			const paymentFilter = $('#payment-filter').value; // nuevo
+			const all = await loadOrders();
+			
+			// IMPORTANTE: Ordenar por fecha descendente (más recientes primero)
+			all.sort((a, b) => {
+				const dateA = new Date(a.date || 0);
+				const dateB = new Date(b.date || 0);
+				return dateB - dateA; // descendente
+			});
+			
+			const items = all.filter(o=>{
+				if(statusFilter && (o.status||'ingresado') !== statusFilter) return false;
+				// nuevo: filtro de pago
+				if(paymentFilter === 'paid' && !o.paid) return false;
+				if(paymentFilter === 'unpaid' && o.paid) return false;
+				if(!filter) return true;
+				// findClientById es asíncrona, pero aquí ya tenemos clientes cargados en memoria si queremos rendimiento.
+				// Para simplicidad hacemos una búsqueda síncrona en clientes cargados (cargamos la lista).
+				const client = (async ()=> { const cl = await loadClients(); return cl.find(c=>c.id==o.clientId) || {}; })();
+				// como client es Promise, mejor cargar clientes antes
+			});
+			// Mejor enfoque: cargar clientes antes de filtrar
+			const clients = await loadClients();
+			const filtered = all.filter(o=>{
+				if(statusFilter && (o.status||'ingresado') !== statusFilter) return false;
+				if(paymentFilter === 'paid' && !o.paid) return false;
+				if(paymentFilter === 'unpaid' && o.paid) return false;
+				if(!filter) return true;
+				const client = clients.find(c=>c.id==o.clientId) || {};
+				return [client.name, o.brand, o.model, o.serial, o.accessories, o.failure, ORDER_STATUSES[o.status]||''].join(' ').toLowerCase().includes(filter);
+			});
+			tbody.innerHTML = '';
+			filtered.forEach(o=>{
+				const client = clients.find(c=>c.id==o.clientId) || {name:'--'};
+				const statusKey = o.status || 'ingresado';
+				const statusLabel = ORDER_STATUSES[statusKey] || statusKey;
+				const statusClass = `status-${statusKey}`;
+				const imageCount = (o.images && o.images.length) ? o.images.length : 0;
+				const priceDisplay = o.price ? formatCurrency(Number(o.price)) : '--';
+				// nuevo: estado de pago
+				const isPaid = o.paid === true;
+				const paymentBadge = isPaid 
+					? '<span class="payment-badge payment-paid">Pagado</span>' 
+					: '<span class="payment-badge payment-unpaid">No pagado</span>';
+				const tr = document.createElement('tr');
+				tr.innerHTML = `
+					<td>${o.id}</td>
+					<td>${escapeHtml(client.name)}</td>
+					<td>${escapeHtml(o.brand||'')}</td>
+					<td>${escapeHtml(o.model||'')}</td>
+					<td><button type="button" class="btn btn-view-eq" data-serial="${escapeHtml(o.serial||'')}">${escapeHtml(o.serial||'')}</button></td>
+					<td>${escapeHtml(o.accessories||'')}</td>
+					<td>${escapeHtml(o.failure||'')}</td>
+					<td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
+					<td>${priceDisplay}</td>
+					<td>${paymentBadge}</td>
+					<td style="text-align:center">${imageCount}</td>
+					<td>${escapeHtml(o.technician||'')}</td>
+					<td>${new Date(o.date).toLocaleString()}</td>
+					<td class="actions">
+						<select class="inline-status" data-id="${o.id}">
+							<option value="ingresado"${statusKey==='ingresado'?' selected':''}>Ingresado</option>
+							<option value="en_reparacion"${statusKey==='en_reparacion'?' selected':''}>En reparación</option>
+							<option value="espera_entrega"${statusKey==='espera_entrega'?' selected':''}>En espera de entrega</option>
+							<option value="entregado"${statusKey==='entregado'?' selected':''}>Entregado</option>
+						</select>
+						<button class="btn btn-toggle-payment" data-id="${o.id}" title="Cambiar estado de pago">${isPaid ? '💰 Pagado' : '💳 Marcar pagado'}</button>
+						<button class="btn btn-copy-link" data-id="${o.id}" style="background:#9c27b0;color:#fff" title="Copiar enlace público">🔗 Link</button>
+						<button class="btn btn-edit" data-id="${o.id}">Editar</button>
+						<button class="btn btn-delete" data-id="${o.id}">Eliminar</button>
+						<button class="btn" style="background:#071a2a;color:#7af0a5" data-id="${o.id}" class="btn-pdf">PDF</button>
+						<button class="btn btn-whatsapp" data-id="${o.id}" style="background:#25D366;color:#06121a">WhatsApp</button>
+					</td>
+				`;
+				tbody.appendChild(tr);
+			});
+
+			// acciones
+			$$('.btn-edit').forEach(b=>b.onclick = ()=> openOrderModal(b.dataset.id));
+			$$('.btn-delete').forEach(b=>b.onclick = async ()=> { if(confirm('Eliminar orden?')) await deleteOrder(b.dataset.id) });
+			$$('select.inline-status').forEach(s=>{
+				s.onchange = async ()=> await updateOrderStatus(s.dataset.id, s.value);
+			});
+			// nuevo: toggle de pago
+			$$('.btn-toggle-payment').forEach(b => b.onclick = async ()=> await toggleOrderPayment(b.dataset.id));
+
+			// botón PDF por orden
+			$$('button[data-id]').filter(b => b.classList.contains('btn') && b.textContent === 'PDF')
+				.forEach(b => b.onclick = ()=> exportOrderPDF(b.dataset.id));
+
+			// botón WhatsApp por orden
+			$$('.btn-whatsapp').forEach(b => b.onclick = ()=> openWhatsApp(b.dataset.id));
+
+			// nuevo: copiar enlace público
+			$$('.btn-copy-link').forEach(b => b.onclick = async ()=> await copyPublicLink(b.dataset.id));
+
+			// abrir hoja de vida
+			$$('.btn-view-eq').forEach(b=> b.onclick = ()=> {
+				const serial = b.dataset.serial;
+				if(!serial) return alert('Serie inválida');
+				openEquipmentModal(serial);
+			});
+
+			// NUEVO: Renderizar vista de tarjetas para móvil
+			const cardsContainer = $('#orders-cards-container');
+			if(cardsContainer) {
+				cardsContainer.innerHTML = '';
+				filtered.forEach(o => {
+					const client = clients.find(c=>c.id==o.clientId) || {name:'--'};
+					const statusKey = o.status || 'ingresado';
+					const statusLabel = ORDER_STATUSES[statusKey] || statusKey;
+					const statusClass = `status-${statusKey}`;
+					const imageCount = (o.images && o.images.length) ? o.images.length : 0;
+					const priceDisplay = o.price ? formatCurrency(Number(o.price)) : '--';
+					const isPaid = o.paid === true;
+					
+					const card = document.createElement('div');
+					card.className = 'order-card';
+					card.innerHTML = `
+						<div class="order-card-header">
+							<div class="order-card-id">#${o.id}</div>
+							<div class="order-card-status">
+								<span class="status-badge ${statusClass}">${statusLabel}</span>
+								<span class="payment-badge ${isPaid ? 'payment-paid' : 'payment-unpaid'}">${isPaid ? 'Pagado' : 'No pagado'}</span>
+							</div>
+						</div>
+						<div class="order-card-body">
+							<div class="order-card-row">
+								<div class="order-card-label">👤 Cliente:</div>
+								<div class="order-card-value">${escapeHtml(client.name)}</div>
+							</div>
+							<div class="order-card-row">
+								<div class="order-card-label">💻 Equipo:</div>
+								<div class="order-card-value">${escapeHtml(o.brand||'--')} ${escapeHtml(o.model||'')}</div>
+							</div>
+							<div class="order-card-row">
+								<div class="order-card-label">🔢 Serie:</div>
+								<div class="order-card-value">${escapeHtml(o.serial||'--')}</div>
+							</div>
+							${o.accessories ? `
+							<div class="order-card-row">
+								<div class="order-card-label">📦 Acces.:</div>
+								<div class="order-card-value">${escapeHtml(o.accessories)}</div>
+							</div>
+							` : ''}
+							<div class="order-card-row">
+								<div class="order-card-label">⚠️ Falla:</div>
+								<div class="order-card-value">${escapeHtml(o.failure||'No especificada')}</div>
+							</div>
+							<div class="order-card-row">
+								<div class="order-card-label">💰 Precio:</div>
+								<div class="order-card-value">${priceDisplay}</div>
+							</div>
+							${o.technician ? `
+							<div class="order-card-row">
+								<div class="order-card-label">🔧 Técnico:</div>
+								<div class="order-card-value">${escapeHtml(o.technician)}</div>
+							</div>
+							` : ''}
+							${imageCount > 0 ? `
+							<div class="order-card-row">
+								<div class="order-card-label">📸 Imágenes:</div>
+								<div class="order-card-value">${imageCount}</div>
+							</div>
+							` : ''}
+							<div class="order-card-row">
+								<div class="order-card-label">📅 Fecha:</div>
+								<div class="order-card-value">${new Date(o.date).toLocaleString()}</div>
+							</div>
+						</div>
+						<div class="order-card-actions">
+							<select class="inline-status-card" data-id="${o.id}">
+								<option value="ingresado"${statusKey==='ingresado'?' selected':''}>Ingresado</option>
+								<option value="en_reparacion"${statusKey==='en_reparacion'?' selected':''}>En reparación</option>
+								<option value="espera_entrega"${statusKey==='espera_entrega'?' selected':''}>Espera entrega</option>
+								<option value="entregado"${statusKey==='entregado'?' selected':''}>Entregado</option>
+							</select>
+							<button class="btn btn-toggle-payment-card" data-id="${o.id}" style="background:#ffa726;color:#07121a">${isPaid ? '💰 Pagado' : '💳 Pagar'}</button>
+							<button class="btn btn-edit-card" data-id="${o.id}" style="background:#3bb4ff;color:#05121a">✏️ Editar</button>
+							<button class="btn btn-pdf-card" data-id="${o.id}" style="background:#071a2a;color:#7af0a5">📄 PDF</button>
+							<button class="btn btn-whatsapp-card" data-id="${o.id}" style="background:#25D366;color:#06121a">📱 WhatsApp</button>
+							<button class="btn btn-copy-link-card" data-id="${o.id}" style="background:#9c27b0;color:#fff">🔗 Link</button>
+							<button class="btn btn-delete-card" data-id="${o.id}" style="background:#ff5b6b;color:#fff">🗑️ Eliminar</button>
+						</div>
+					`;
+					cardsContainer.appendChild(card);
+				});
+				
+				// Bindings para tarjetas
+				$$('.btn-edit-card').forEach(b=>b.onclick = ()=> openOrderModal(b.dataset.id));
+				$$('.btn-delete-card').forEach(b=>b.onclick = async ()=> { if(confirm('¿Eliminar orden?')) await deleteOrder(b.dataset.id) });
+				$$('select.inline-status-card').forEach(s=>{
+					s.onchange = async ()=> await updateOrderStatus(s.dataset.id, s.value);
+				});
+				$$('.btn-toggle-payment-card').forEach(b => b.onclick = async ()=> await toggleOrderPayment(b.dataset.id));
+				$$('.btn-pdf-card').forEach(b => b.onclick = ()=> exportOrderPDF(b.dataset.id));
+				$$('.btn-whatsapp-card').forEach(b => b.onclick = ()=> openWhatsApp(b.dataset.id));
+				$$('.btn-copy-link-card').forEach(b => b.onclick = async ()=> await copyPublicLink(b.dataset.id));
+			}
+
+			$('#orders-count').textContent = `Mostrando ${filtered.length} registros`;
+			// actualizar métricas cuando se renderizan órdenes
+			await computeMetrics();
+		}
+
+		// eliminar orden (ahora asíncrono)
+		async function deleteOrder(id){
+			const list = (await loadOrders()).filter(x=>x.id!=id);
+			await saveOrders(list);
+			await renderOrders();
+			await renderFinance();
+			await computeMetrics();
+		}
+
+		// Generar PDF para una sola orden (sincrónico en su uso pero puede ser async)
+		async function exportOrderPDF(id){
+			const orders = await loadOrders();
+			const order = orders.find(o=>o.id==id);
+			if(!order) return alert('Orden no encontrada');
+			
+			// generar token si no existe
+			if(!order.accessToken){
+				order.accessToken = generateAccessToken();
+				await saveOrders(orders);
+			}
+			
+			const client = (await loadClients()).find(c=>c.id==order.clientId) || {name:'--', phone:'', email:''};
+			const publicLink = getPublicOrderLink(order);
+			
+			const { jsPDF } = window.jspdf;
+			const doc = new jsPDF({unit:'pt', format:'letter'});
+			const pageWidth = doc.internal.pageSize.width;
+			const pageHeight = doc.internal.pageSize.height;
+			const margin = 60;
+			const centerX = pageWidth / 2;
+			let y = margin + 20;
+			
+			// Cargar y agregar logo
+			try {
+				const logoImage = await loadImageFromUrl('./image.png');
+				const logoSize = 60; // Tamaño del logo
+				doc.addImage(logoImage, 'PNG', centerX - logoSize/2, y, logoSize, logoSize);
+				y += logoSize + 15;
+			} catch(err) {
+				console.error('Error cargando logo:', err);
+				// Fallback al logo tipográfico si no se puede cargar la imagen
+				doc.setFontSize(20);
+				doc.setFont(undefined, 'bold');
+				const titleWidth = doc.getTextWidth('MIPC COMPUTADORES');
+				doc.text('MIPC COMPUTADORES', centerX - titleWidth/2, y);
+				y += 30;
+			}
+			
+			// Título del documento
+			doc.setFontSize(18);
+			doc.setFont(undefined, 'bold');
+			doc.setTextColor(0, 0, 0); // Asegurar color negro
+			const serviceTitle = 'ORDEN DE SERVICIO';
+			const serviceTitleWidth = doc.getTextWidth(serviceTitle);
+			doc.text(serviceTitle, centerX - serviceTitleWidth/2, y);
+			y += 30;
+			
+			// Línea separadora
+			doc.setLineWidth(1);
+			doc.line(margin, y, pageWidth - margin, y);
+			y += 25;
+			
+			// Información en dos columnas
+			doc.setFontSize(11);
+			doc.setFont(undefined, 'normal');
+			
+			const leftColumn = margin + 20;
+			const rightColumn = centerX + 20;
+			const startY = y;
+			
+			// Columna izquierda - Información de la orden
+			y = startY;
+			doc.setFont(undefined, 'bold');
+			doc.text('INFORMACIÓN DE LA ORDEN', leftColumn, y);
+			y += 20;
+			doc.setFont(undefined, 'normal');
+			
+			const orderInfo = [
+				`ID: ${order.id}`,
+				`Fecha: ${order.date ? new Date(order.date).toLocaleString() : ''}`,
+				`Estado: ${ORDER_STATUSES[order.status||'ingresado'] || order.status}`,
+				`Pago: ${order.paid ? 'Pagado' : 'No pagado'}`,
+				`Precio: ${order.price ? formatCurrency(Number(order.price)) : 'No especificado'}`,
+				`Técnico: ${order.technician||'No asignado'}`
+			];
+			
+			orderInfo.forEach(line => {
+				doc.text(line, leftColumn, y);
+				y += 15;
+			});
+			
+			// Columna derecha - Información del cliente
+			y = startY;
+			doc.setFont(undefined, 'bold');
+			doc.text('INFORMACIÓN DEL CLIENTE', rightColumn, y);
+			y += 20;
+			doc.setFont(undefined, 'normal');
+			
+			const clientInfo = [
+				`Nombre: ${client.name}`,
+				`Teléfono: ${client.phone||'No especificado'}`,
+				`Email: ${client.email||'No especificado'}`,
+				`Cédula: ${client.cedula||'No especificado'}`
+			];
+			
+			clientInfo.forEach(line => {
+				doc.text(line, rightColumn, y);
+				y += 15;
+			});
+			
+			// Información del equipo (ancho completo)
+			y = Math.max(startY + (orderInfo.length * 15) + 40, startY + (clientInfo.length * 15) + 40);
+			
+			doc.setFont(undefined, 'bold');
+			doc.text('INFORMACIÓN DEL EQUIPO', leftColumn, y);
+			y += 20;
+			doc.setFont(undefined, 'normal');
+			
+			const equipInfo = [
+				`Marca: ${order.brand||'No especificado'}`,
+				`Modelo: ${order.model||'No especificado'}`,
+				`Serie: ${order.serial||'No especificado'}`,
+				`Accesorios: ${order.accessories||'Ninguno'}`
+			];
+			
+			equipInfo.forEach(line => {
+				doc.text(line, leftColumn, y);
+				y += 15;
+			});
+			
+			// Falla reportada
+			y += 10;
+			doc.setFont(undefined, 'bold');
+			doc.text('FALLA REPORTADA:', leftColumn, y);
+			y += 15;
+			doc.setFont(undefined, 'normal');
+			
+			const failureText = order.failure || 'No especificada';
+			const failureLines = wrapText(failureText, 80);
+			if(Array.isArray(failureLines)){
+				failureLines.forEach(line => {
+					doc.text(line, leftColumn, y);
+					y += 15;
+				});
+			} else {
+				doc.text(failureLines, leftColumn, y);
+				y += 15;
+			}
+			
+			// Notas (si existen)
+			if(order.notes){
+				y += 10;
+				doc.setFont(undefined, 'bold');
+				doc.text('NOTAS:', leftColumn, y);
+				y += 15;
+				doc.setFont(undefined, 'normal');
+				
+				const notesLines = wrapText(order.notes, 80);
+				if(Array.isArray(notesLines)){
+					notesLines.forEach(line => {
+						doc.text(line, leftColumn, y);
+						y += 15;
+					});
+				} else {
+					doc.text(notesLines, leftColumn, y);
+					y += 15;
+				}
+			}
+			
+			// Sección QR centrada en la parte inferior
+			y += 30;
+			const qrSize = 80;
+			
+			// Verificar si hay espacio, sino crear nueva página
+			if(y + qrSize + 60 > pageHeight - margin){
+				doc.addPage();
+				y = margin + 40;
+			}
+			
+			// Texto antes del QR (centrado)
+			doc.setFont(undefined, 'bold');
+			doc.setFontSize(12);
+			const qrText = 'Escanea el código QR para ver el estado de tu orden:';
+			const qrTextWidth = doc.getTextWidth(qrText);
+			doc.text(qrText, centerX - qrTextWidth/2, y);
+			y += 20;
+			
+			// QR centrado
+			const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(publicLink)}`;
+			
+			try {
+				const img = await loadImageFromUrl(qrUrl);
+				doc.addImage(img, 'PNG', centerX - qrSize/2, y, qrSize, qrSize);
+				y += qrSize + 15;
+			} catch(err) {
+				console.error('Error generando QR:', err);
+				doc.setFontSize(9);
+				const errorText = 'No se pudo generar el código QR.';
+				const errorTextWidth = doc.getTextWidth(errorText);
+				doc.text(errorText, centerX - errorTextWidth/2, y + 20);
+				y += 40;
+			}
+			
+			// URL debajo del QR (centrada y dividida en líneas)
+			doc.setFontSize(8);
+			doc.setFont(undefined, 'normal');
+			const visitText = 'O visita:';
+			const visitTextWidth = doc.getTextWidth(visitText);
+			doc.text(visitText, centerX - visitTextWidth/2, y);
+			y += 12;
+			
+			doc.setFontSize(7);
+			const urlLines = wrapText(publicLink, 60);
+			if(Array.isArray(urlLines)){
+				urlLines.forEach(line => {
+					const lineWidth = doc.getTextWidth(line);
+					doc.text(line, centerX - lineWidth/2, y);
+					y += 10;
+				});
+			} else {
+				const lineWidth = doc.getTextWidth(urlLines);
+				doc.text(urlLines, centerX - lineWidth/2, y);
+			}
+			
+		// Footer
+		y = pageHeight - margin;
+		doc.setFontSize(8);
+		doc.setFont(undefined, 'italic');
+		const footerText = 'Mipc Computadores - Servicio Técnico Especializado';
+		const footerWidth = doc.getTextWidth(footerText);
+		doc.text(footerText, centerX - footerWidth/2, y);
+
+		// Abrir PDF en nueva pestaña para previsualización
+		const pdfBlob = doc.output('bloburl');
+		window.open(pdfBlob, '_blank');			function wrapText(text, maxChars){
+				if(!text) return '';
+				if(text.length <= maxChars) return text;
+				const words = text.split(' ');
+				const lines = [];
+				let currentLine = '';
+				
+				words.forEach(word => {
+					if((currentLine + word).length <= maxChars){
+						currentLine += (currentLine ? ' ' : '') + word;
+					} else {
+						if(currentLine) lines.push(currentLine);
+						currentLine = word;
+					}
+				});
+				
+				if(currentLine) lines.push(currentLine);
+				return lines;
+			}
+		}
+
+		// Función helper para cargar imagen desde URL
+		function loadImageFromUrl(url){
+			return new Promise((resolve, reject) => {
+				const img = new Image();
+				img.crossOrigin = 'Anonymous';
+				img.onload = () => {
+					const canvas = document.createElement('canvas');
+					canvas.width = img.width;
+					canvas.height = img.height;
+					const ctx = canvas.getContext('2d');
+					ctx.drawImage(img, 0, 0);
+					resolve(canvas.toDataURL('image/png'));
+				};
+				img.onerror = reject;
+				img.src = url;
+			});
+		}
+
+		async function openOrderModal(id){
+			editingOrderId = id || null;
+			const modal = $('#modal-order');
+			$('#modal-order-title').textContent = id ? 'Editar orden' : 'Nueva orden';
+			const form = $('#form-order');
+			form.reset();
+			await populateClientSelect();
+			// limpiar imágenes previas
+			currentOrderImages = [];
+			$('#image-preview-container').innerHTML = '';
+			const inputCamera = $('#order-images-camera');
+			const inputGallery = $('#order-images-gallery');
+			if(inputCamera) inputCamera.value = '';
+			if(inputGallery) inputGallery.value = '';
+
+			if(id){
+				const item = (await loadOrders()).find(x=>x.id==id);
+				if(item){
+					form.clientId.value = item.clientId || '';
+					form.brand.value = item.brand || '';
+					form.serial.value = item.serial || '';
+					form.model.value = item.model || '';
+					form.accessories.value = item.accessories || '';
+					form.failure.value = item.failure || '';
+					form.technician.value = item.technician || '';
+					form.price.value = item.price || '';
+					form.notes.value = item.notes || '';
+					form.status.value = item.status || 'ingresado';
+					form.paid.value = item.paid ? 'true' : 'false';
+					// cargar imágenes existentes
+					if(item.images && Array.isArray(item.images)){
+						currentOrderImages = [...item.images];
+						renderImagePreviews();
+					}
+				}
+			}
+			modal.classList.add('show');
+			form.querySelector('select[name="clientId"]').focus();
+		}
+		function closeModal(sel){ document.querySelector(sel).classList.remove('show'); editingOrderId = null; editingClientId = null; }
+
+		// nueva variable global para almacenar imágenes temporalmente
+		let currentOrderImages = [];
+		const MAX_IMAGES_PER_ORDER = 5; // máximo 5 imágenes por orden
+
+		// nueva función: manejar carga de imágenes
+		function handleImageUpload(e){
+			const files = Array.from(e.target.files);
+			if(files.length === 0) return;
+			
+			// Verificar límite de imágenes
+			if(currentOrderImages.length >= MAX_IMAGES_PER_ORDER){
+				alert(`Máximo ${MAX_IMAGES_PER_ORDER} imágenes por orden. Elimina algunas para agregar más.`);
+				e.target.value = '';
+				return;
+			}
+			
+			const remainingSlots = MAX_IMAGES_PER_ORDER - currentOrderImages.length;
+			const filesToProcess = files.slice(0, remainingSlots);
+			
+			if(files.length > remainingSlots){
+				alert(`Solo se agregarán ${remainingSlots} imágenes para no exceder el límite de ${MAX_IMAGES_PER_ORDER}.`);
+			}
+			
+			filesToProcess.forEach(file => {
+				if(!file.type.startsWith('image/')) return;
+				
+				// limitar tamaño (máx 5MB por imagen antes de comprimir)
+				if(file.size > 5 * 1024 * 1024){
+					alert(`La imagen ${file.name} es muy grande. Máximo 5MB por imagen.`);
+					return;
+				}
+
+				const reader = new FileReader();
+				reader.onload = (ev) => {
+					// Comprimir la imagen antes de guardarla
+					compressImage(ev.target.result, file.name, (compressedData) => {
+						if(currentOrderImages.length < MAX_IMAGES_PER_ORDER){
+							currentOrderImages.push({
+								data: compressedData,
+								name: file.name,
+								date: new Date().toISOString()
+							});
+							renderImagePreviews();
+						}
+					});
+				};
+				reader.readAsDataURL(file);
+			});
+			
+			// limpiar input para permitir seleccionar las mismas imágenes nuevamente
+			e.target.value = '';
+		}
+
+		// Nueva función: comprimir imagen para reducir tamaño AGRESIVAMENTE
+		function compressImage(dataUrl, fileName, callback){
+			const img = new Image();
+			img.onload = () => {
+				const canvas = document.createElement('canvas');
+				const ctx = canvas.getContext('2d');
+				
+				// Redimensionar a máximo 1200px (más pequeño para reducir tamaño)
+				let width = img.width;
+				let height = img.height;
+				const maxWidth = 1200;
+				const maxHeight = 1200;
+				
+				if(width > maxWidth || height > maxHeight){
+					const ratio = Math.min(maxWidth / width, maxHeight / height);
+					width = width * ratio;
+					height = height * ratio;
+				}
+				
+				canvas.width = width;
+				canvas.height = height;
+				ctx.drawImage(img, 0, 0, width, height);
+				
+				// Comprimir a JPEG con calidad 0.6 (60%) - más compresión
+				const compressedData = canvas.toDataURL('image/jpeg', 0.6);
+				
+				// Verificar tamaño final
+				const sizeInKB = (compressedData.length * 0.75) / 1024; // aproximado
+				console.log(`Imagen comprimida: ${fileName}, tamaño ~${sizeInKB.toFixed(2)} KB`);
+				
+				callback(compressedData);
+			};
+			img.src = dataUrl;
+		}
+
+		// nueva función: renderizar vista previa de imágenes
+		function renderImagePreviews(){
+			const container = $('#image-preview-container');
+			container.innerHTML = '';
+			
+			currentOrderImages.forEach((img, index) => {
+				const div = document.createElement('div');
+				div.className = 'image-preview';
+				div.innerHTML = `
+					<img src="${img.data}" alt="${escapeHtml(img.name)}">
+					<button type="button" class="remove-img" data-index="${index}">✕</button>
+				`;
+				container.appendChild(div);
+			});
+
+			// actualizar contador de imágenes
+			const countEl = $('#image-count');
+			if(countEl){
+				const count = currentOrderImages.length;
+				countEl.textContent = `(${count} ${count === 1 ? 'imagen' : 'imágenes'})`;
+			}
+
+			// bind eliminar imagen
+			$$('.remove-img').forEach(btn => {
+				btn.onclick = () => {
+					const index = parseInt(btn.dataset.index);
+					currentOrderImages.splice(index, 1);
+					renderImagePreviews();
+				};
+			});
+		}
+
+		async function saveOrderFromForm(e){
+			e.preventDefault();
+			const f = e.target;
+			
+			// Mostrar indicador de carga
+			const submitBtn = f.querySelector('button[type="submit"]');
+			const originalText = submitBtn.textContent;
+			submitBtn.disabled = true;
+			submitBtn.textContent = 'Guardando...';
+			
+			try{
+				let orderToSave;
+				
+				if(editingOrderId){
+					// Cargar la orden existente
+					const list = await loadOrders();
+					const existing = list.find(x=>x.id==editingOrderId);
+					if(existing){
+						orderToSave = {
+							...existing, // Esto preserva TODOS los campos existentes incluyendo 'date'
+							clientId: f.clientId.value,
+							brand: f.brand.value,
+							serial: f.serial.value,
+							model: f.model.value,
+							accessories: f.accessories.value,
+							failure: f.failure.value,
+							technician: f.technician.value,
+							price: f.price.value || null,
+							notes: f.notes.value,
+							status: f.status ? f.status.value || f.status : (existing.status || 'ingresado'),
+							paid: f.paid.value === 'true',
+							images: currentOrderImages
+							// NO modificamos 'date' para mantener la posición original
+						};
+					}
+				} else {
+					// Nueva orden (se agrega al inicio por defecto)
+					orderToSave = {
+						id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString().slice(-6),
+						accessToken: generateAccessToken(),
+						clientId: f.clientId.value,
+						brand: f.brand.value,
+						serial: f.serial.value,
+						model: f.model.value,
+						accessories: f.accessories.value,
+						failure: f.failure.value,
+						technician: f.technician.value,
+						price: f.price.value || null,
+						notes: f.notes.value,
+						status: f.status ? f.status.value || 'ingresado' : 'ingresado',
+						paid: f.paid.value === 'true',
+						date: new Date().toISOString(),
+						images: currentOrderImages
+					};
+				}
+				
+				// Guardar solo esta orden (mucho más eficiente)
+				await saveOrder(orderToSave);
+				await upsertEquipmentFromOrder(orderToSave);
+				
+				closeModal('#modal-order');
+				await renderOrders();
+			}catch(err){
+				alert('Error al guardar: ' + err.message);
+				console.error(err);
+			}finally{
+				// Restaurar botón
+				submitBtn.disabled = false;
+				submitBtn.textContent = originalText;
+			}
+		}
+
+		// nueva función: actualizar estado rápidamente
+		async function updateOrderStatus(id, newStatus){
+			const list = await loadOrders();
+			const idx = list.findIndex(x=>x.id==id);
+			if(idx===-1) return;
+			
+			// Asegurar que la orden tiene token antes de actualizar
+			if(!list[idx].accessToken){
+				list[idx].accessToken = generateAccessToken();
+			}
+			
+			list[idx].status = newStatus;
+			await upsertEquipmentFromOrder({...list[idx], date: new Date().toISOString()});
+			await saveOrders(list);
+			await renderOrders();
+		}
+
+		// Clients (ahora asíncrono)
+		async function renderClients(){
+			const tbody = $('#clients-table tbody');
+			const items = await loadClients();
+			tbody.innerHTML = '';
+			items.forEach(c=>{
+				const tr = document.createElement('tr');
+				tr.innerHTML = `
+					<td>${c.id}</td>
+					<td>${escapeHtml(c.name)}</td>
+					<td>${escapeHtml(c.cedula||'')}</td>
+					<td>${escapeHtml(c.phone||'')}</td>
+					<td>${escapeHtml(c.email||'')}</td>
+					<td>
+						<button class="btn btn-edit" data-id="${c.id}">Editar</button>
+						<button class="btn btn-delete" data-id="${c.id}">Eliminar</button>
+					</td>
+				`;
+				tbody.appendChild(tr);
+			});
+			$$('#clients-table .btn-edit').forEach(b=>b.onclick = ()=> openClientModal(b.dataset.id));
+			$$('#clients-table .btn-delete').forEach(b=>b.onclick = async ()=> { if(confirm('Eliminar cliente?')) await deleteClient(b.dataset.id) });
+
+			// Renderizar tarjetas para móvil
+			const cardsContainer = $('#clients-cards-container');
+			if(cardsContainer){
+				cardsContainer.innerHTML = '';
+				items.forEach(c=>{
+					const card = document.createElement('div');
+					card.className = 'data-card';
+					card.innerHTML = `
+						<div class="data-card-header">
+							<h4>👤 ${escapeHtml(c.name)}</h4>
+							<span class="badge" style="background:#3bb4ff">ID: ${c.id}</span>
+						</div>
+						<div class="data-card-body">
+							${c.cedula ? `<div class="data-card-row"><span class="label">🪪 Cédula:</span><span class="value">${escapeHtml(c.cedula)}</span></div>` : ''}
+							${c.phone ? `<div class="data-card-row"><span class="label">📞 Teléfono:</span><span class="value">${escapeHtml(c.phone)}</span></div>` : ''}
+							${c.email ? `<div class="data-card-row"><span class="label">📧 Email:</span><span class="value">${escapeHtml(c.email)}</span></div>` : ''}
+						</div>
+						<div class="data-card-actions">
+							<button class="btn btn-edit card-btn-edit" data-id="${c.id}">✏️ Editar</button>
+							<button class="btn btn-delete card-btn-delete" data-id="${c.id}">🗑️ Eliminar</button>
+						</div>
+					`;
+					cardsContainer.appendChild(card);
+				});
+				$$('#clients-cards-container .card-btn-edit').forEach(b=>b.onclick = ()=> openClientModal(b.dataset.id));
+				$$('#clients-cards-container .card-btn-delete').forEach(b=>b.onclick = async ()=> { if(confirm('¿Eliminar cliente?')) await deleteClient(b.dataset.id) });
+			}
+
+			// actualizar métricas al renderizar clientes
+			await computeMetrics();
+		}
+
+		async function openClientModal(id){
+			editingClientId = id || null;
+			const modal = $('#modal-client');
+			$('#modal-client-title').textContent = id ? 'Editar cliente' : 'Nuevo cliente';
+			const form = $('#form-client');
+			form.reset();
+			if(id){
+				const item = (await loadClients()).find(x=>x.id==id);
+				if(item){
+					form.name.value = item.name || '';
+					form.cedula.value = item.cedula || '';
+					form.phone.value = item.phone || '';
+					form.email.value = item.email || '';
+					form.address.value = item.address || '';
+				}
+			}
+			modal.classList.add('show');
+		}
+
+		async function saveClientFromForm(e){
+			e.preventDefault();
+			const f = e.target;
+			const list = await loadClients();
+			let newClientId = null;
+			if(editingClientId){
+				const idx = list.findIndex(x=>x.id==editingClientId);
+				if(idx>-1){
+					list[idx] = {...list[idx],
+						name:f.name.value,
+						cedula: f.cedula.value,
+						phone:f.phone.value,
+						email:f.email.value,
+						address:f.address.value
+					};
+				}
+			} else {
+				const item = {
+					id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString().slice(-6),
+					name:f.name.value,
+					cedula: f.cedula.value,
+					phone:f.phone.value,
+					email:f.email.value,
+					address:f.address.value
+				};
+				list.unshift(item);
+				newClientId = item.id;
+			}
+			await saveClients(list);
+
+			// repoblar select de clientes en el formulario de orden
+			await populateClientSelect();
+
+			// si creamos un cliente nuevo, seleccionarlo automáticamente en el formulario de orden (si existe)
+			if(newClientId){
+				const orderSel = document.querySelector('#form-order select[name="clientId"]');
+				if(orderSel){
+					orderSel.value = newClientId;
+					const modalOrder = document.querySelector('#modal-order');
+					if(modalOrder && modalOrder.classList.contains('show')) orderSel.focus();
+				}
+			}
+
+			closeModal('#modal-client');
+			await renderClients();
+		}
+
+		async function deleteClient(id){
+			const list = (await loadClients()).filter(x=>x.id!=id);
+			await saveClients(list);
+			await renderClients();
+			// repoblar select de clientes
+			await populateClientSelect();
+		}
+
+		// Helpers para clientes
+		async function populateClientSelect(){
+			const sel = document.querySelector('#form-order select[name="clientId"]');
+			const clients = await loadClients();
+			if(!sel) return;
+			sel.innerHTML = '<option value="">-- Seleccionar cliente --</option>';
+			clients.forEach(c => {
+				const opt = document.createElement('option');
+				opt.value = c.id; opt.textContent = c.name;
+				sel.appendChild(opt);
+			});
+		}
+		async function findClientById(id){ const clients = await loadClients(); return clients.find(c=>c.id==id); }
+
+		// Equipments: hoja de vida por serial (asíncrono)
+		async function upsertEquipmentFromOrder(order){
+			if(!order.serial) return;
+			const list = await loadEquipments();
+			let eq = list.find(e => e.serial && e.serial.toLowerCase() === order.serial.toLowerCase());
+			const entry = {
+				orderId: order.id,
+				date: order.date || new Date().toISOString(),
+				clientId: order.clientId,
+				brand: order.brand,
+				model: order.model,
+				accessories: order.accessories,
+				failure: order.failure,
+				technician: order.technician,
+				notes: order.notes,
+				status: order.status || 'ingresado'
+			};
+			if(eq){
+				eq.brand = order.brand || eq.brand;
+				eq.model = order.model || eq.model;
+				eq.clientId = order.clientId || eq.clientId;
+				eq.history = eq.history || [];
+				eq.history.unshift(entry);
+			} else {
+				eq = {
+					id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString().slice(-6),
+					serial: order.serial,
+					brand: order.brand,
+					model: order.model,
+					clientId: order.clientId,
+					history: [entry]
+				};
+				list.unshift(eq);
+			}
+			await saveEquipments(list);
+		}
+
+		// Export / Import (ahora usan el backend)
+		async function exportData(){
+			const data = { orders: await loadOrders(), clients: await loadClients(), equipments: await loadEquipments(), transactions: await loadTransactions(), exportedAt: new Date().toISOString() };
+			const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url; a.download = 'mipc_data.json'; a.click();
+			URL.revokeObjectURL(url);
+		}
+		async function importDataFile(e){
+			const file = e.target.files[0];
+			if(!file) return;
+			const reader = new FileReader();
+			reader.onload = async ev => {
+				try {
+					const data = JSON.parse(ev.target.result);
+					if(Array.isArray(data.orders)) await saveOrders(data.orders);
+					if(Array.isArray(data.clients)) await saveClients(data.clients);
+					if(Array.isArray(data.equipments)) await saveEquipments(data.equipments);
+					if(Array.isArray(data.transactions)) await saveTransactions(data.transactions);
+					alert('Importación completada');
+					await renderOrders(); await renderClients();
+					await populateFinanceCategorySelects();
+					await renderFinance();
+				} catch(err){
+					alert('Archivo inválido');
+				}
+			};
+			reader.readAsText(file);
+			e.target.value = '';
+		}
+
+		// Exportar órdenes a PDF (usa jsPDF) - ahora async para obtener datos
+		async function exportOrdersPDF(){
+			const orders = await loadOrders();
+			if(!orders || orders.length===0) return alert('No hay órdenes para exportar.');
+			const clients = await loadClients();
+			const { jsPDF } = window.jspdf;
+			const doc = new jsPDF({unit:'pt', format:'letter'});
+			const margin = 40;
+			let y = 40;
+			const lineHeight = 14;
+			const pageHeight = doc.internal.pageSize.height;
+			const pageWidth = doc.internal.pageSize.width;
+			
+			doc.setFontSize(14);
+			doc.text('Órdenes - Mipc Computadores', margin, y);
+			y += 20;
+			doc.setFontSize(10);
+
+			const cols = ['ID','Cliente','Marca','Modelo','Serie','Estado','Pago','Técnico','Fecha'];
+			const colWidths = [40,100,60,60,80,70,50,80,80];
+			const startX = margin;
+
+			function printRow(values){
+				let x = startX;
+				for(let i=0;i<values.length;i++){
+					const txt = (values[i]===null||values[i]===undefined)?'':String(values[i]);
+					doc.text(truncateText(txt, Math.floor(colWidths[i]/6)), x, y);
+					x += colWidths[i];
+				}
+				y += lineHeight;
+			}
+
+			printRow(cols);
+			doc.setLineWidth(0.5);
+			doc.line(margin, y-8, pageWidth - margin, y-8);
+
+			orders.forEach((o, idx)=>{
+				const client = clients.find(c=>c.id==o.clientId) || {name:'--'};
+				const statusLabel = ORDER_STATUSES[o.status || 'ingresado'] || (o.status||'');
+				const paymentLabel = o.paid ? 'Sí' : 'No';
+				const row = [
+					o.id,
+					client.name,
+					o.brand || '',
+					o.model || '',
+					o.serial || '',
+					statusLabel,
+					paymentLabel,
+					o.technician || '',
+					o.date ? new Date(o.date).toLocaleString() : ''
+				];
+				if(y + lineHeight > pageHeight - margin){
+					doc.addPage();
+					y = margin;
+				}
+				printRow(row);
+			});
+
+			// Abrir PDF en nueva pestaña para previsualización
+			const pdfBlob = doc.output('bloburl');
+			window.open(pdfBlob, '_blank');
+
+			function truncateText(str, maxChars){
+				if(!str) return '';
+				if(str.length <= maxChars) return str;
+				return str.slice(0, maxChars-3) + '...';
+			}
+		}
+
+		// NUEVO: procesar inventario y finanzas de factura
+		async function processInvoiceInventoryAndFinance(invoice, registerInFinance = true){
+			const inventory = await loadInventory();
+			
+			// descontar inventario
+			for(const item of invoice.items){
+				if(item.inventoryItemId){
+					const idx = inventory.findIndex(i => i.id === item.inventoryItemId);
+					if(idx !== -1){
+						inventory[idx].stock = Number(inventory[idx].stock || 0) - Number(item.quantity || 0);
+						inventory[idx].updatedAt = new Date().toISOString();
+					}
+				}
+			}
+			await saveInventory(inventory);
+
+			// registrar movimientos de inventario
+			const movements = await loadInventoryMovements();
+			for(const item of invoice.items){
+				if(item.inventoryItemId){
+					movements.unshift({
+						id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString().slice(-6),
+						itemId: item.inventoryItemId,
+						type: 'out',
+						qty: item.quantity,
+						unitPrice: item.unitPrice,
+						total: item.total,
+						date: invoice.date,
+						notes: `Factura ${invoice.invoiceNumber}`,
+						invoiceId: invoice.id
+					});
+				}
+			}
+			await saveInventoryMovements(movements);
+
+			// registrar en finanzas si está pagada Y el usuario lo autorizó
+			if(invoice.paymentStatus === 'paid' && registerInFinance){
+				const transactions = await loadTransactions();
+				transactions.unshift({
+					id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString().slice(-6),
+					type: 'income',
+					amount: invoice.total,
+					category: 'Ventas',
+					date: invoice.date,
+					notes: `Factura ${invoice.invoiceNumber}`,
+					invoiceId: invoice.id
+				});
+				await saveTransactions(transactions);
+			}
+		}
+
+		/* NUEVO: eliminar factura */
+		async function deleteInvoice(id){
+			const invoices = await loadInvoices();
+			const invoice = invoices.find(i => i.id === id);
+			
+			if(invoice){
+				// restaurar inventario
+				const inventory = await loadInventory();
+				for(const item of invoice.items){
+					if(item.inventoryItemId){
+						const idx = inventory.findIndex(i => i.id === item.inventoryItemId);
+						if(idx !== -1){
+							inventory[idx].stock = Number(inventory[idx].stock || 0) + Number(item.quantity || 0);
+							inventory[idx].updatedAt = new Date().toISOString();
+						}
+					}
+				}
+				await saveInventory(inventory);
+
+				// eliminar movimientos
+				let movements = await loadInventoryMovements();
+				movements = movements.filter(m => m.invoiceId !== id);
+				await saveInventoryMovements(movements);
+
+				// eliminar transacción
+				let transactions = await loadTransactions();
+				transactions = transactions.filter(t => t.invoiceId !== id);
+				await saveTransactions(transactions);
+			}
+
+			const list = invoices.filter(x => x.id !== id);
+			await saveInvoices(list);
+			await renderInvoices();
+			await renderInventory();
+			await renderFinance();
+		}
+
+		/* NUEVO: exportar factura a PDF */
+		async function exportInvoicePDF(id){
+			const invoices = await loadInvoices();
+			const invoice = invoices.find(i => i.id === id);
+			if(!invoice) return alert('Factura no encontrada');
+
+			const clients = await loadClients();
+			const client = clients.find(c => c.id === invoice.clientId) || {name:'--', cedula:'', phone:'', email:'', address:''};
+
+			const { jsPDF } = window.jspdf;
+			const doc = new jsPDF({unit:'pt', format:'letter'});
+			const pageWidth = doc.internal.pageSize.width;
+			const margin = 40;
+			const centerX = pageWidth / 2;
+			let y = 40;
+
+			// Logo
+			try {
+				const logoImage = await loadImageFromUrl('./image.png');
+				const logoSize = 50;
+				doc.addImage(logoImage, 'PNG', margin, y, logoSize, logoSize);
+			} catch(err) {
+				console.error('Error cargando logo:', err);
+			}
+
+			// Título y número de factura
+			doc.setFontSize(20);
+			doc.setFont(undefined, 'bold');
+			doc.text('FACTURA', pageWidth - margin - 100, y + 20);
+			doc.setFontSize(12);
+			doc.setFont(undefined, 'normal');
+			doc.text(invoice.invoiceNumber || '', pageWidth - margin - 100, y + 40);
+
+			y += 70;
+
+			// Información de la empresa (izquierda)
+			doc.setFontSize(10);
+			doc.setFont(undefined, 'bold');
+			doc.text('MIPC COMPUTADORES', margin, y);
+			y += 15;
+			doc.setFont(undefined, 'normal');
+			doc.text('Cel: 3202307508', margin, y);
+			y += 12;
+			doc.text('Email: mipcbarbosa@hotmail.com', margin, y);
+
+			// Información del cliente (derecha)
+			y = 110;
+			const rightX = centerX + 20;
+			doc.setFont(undefined, 'bold');
+			doc.text('CLIENTE:', rightX, y);
+			y += 15;
+			doc.setFont(undefined, 'normal');
+			doc.text(client.name, rightX, y);
+			y += 12;
+			if(client.cedula) { doc.text(`Cédula: ${client.cedula}`, rightX, y); y += 12; }
+			if(client.phone) { doc.text(`Tel: ${client.phone}`, rightX, y); y += 12; }
+			if(client.email) { doc.text(`Email: ${client.email}`, rightX, y); y += 12; }
+
+			y = Math.max(y, 180) + 20;
+
+			// Fecha
+			doc.setFont(undefined, 'bold');
+			doc.text(`Fecha: `, margin, y);
+			doc.setFont(undefined, 'normal');
+			doc.text(invoice.date || '', margin + 50, y);
+
+			y += 40;
+
+			// Tabla de ítems (sin líneas)
+			doc.setFontSize(9);
+			doc.setFont(undefined, 'bold');
+			
+			const colX = [margin, margin + 250, margin + 320, margin + 400, margin + 480];
+			doc.text('Descripción', colX[0], y);
+			doc.text('Cant.', colX[1], y);
+			doc.text('Precio u.', colX[2], y);
+			doc.text('Total', colX[3], y);
+			
+			y += 20;
+			
+			doc.setFont(undefined, 'normal');
+			
+			invoice.items.forEach(item => {
+				if(y > 700){
+					doc.addPage();
+					y = 40;
+				}
+				
+				doc.text(item.description || '', colX[0], y, {maxWidth: 240});
+				doc.text(String(item.quantity || 0), colX[1], y);
+				doc.text(formatCurrency(item.unitPrice || 0), colX[2], y);
+				doc.text(formatCurrency(item.total || 0), colX[3], y);
+				
+				y += 20;
+			});
+
+			y += 25;
+
+			// Totales - Sin líneas
+			const totalsLabelX = pageWidth - 180;
+			const totalsValueX = pageWidth - margin;
+			
+			doc.setFontSize(10);
+			doc.setFont(undefined, 'normal');
+			doc.text('Subtotal:', totalsLabelX, y);
+			doc.text(formatCurrency(invoice.subtotal || 0), totalsValueX, y, {align: 'right'});
+			y += 25;
+			
+			doc.setFont(undefined, 'bold');
+			doc.setFontSize(12);
+			doc.text('TOTAL:', totalsLabelX, y);
+			doc.text(formatCurrency(invoice.total || 0), totalsValueX, y, {align: 'right'});
+
+			// Notas
+			if(invoice.notes){
+				y += 30;
+				doc.setFontSize(9);
+				doc.setFont(undefined, 'bold');
+				doc.text('Notas:', margin, y);
+				y += 12;
+				doc.setFont(undefined, 'normal');
+				const notesLines = doc.splitTextToSize(invoice.notes, pageWidth - margin * 2);
+				doc.text(notesLines, margin, y);
+			}
+
+		// Footer
+		y = 750;
+		doc.setFontSize(8);
+		doc.setFont(undefined, 'italic');
+		const footerText = 'Gracias por su compra - Mipc Computadores';
+		const footerWidth = doc.getTextWidth(footerText);
+		doc.text(footerText, centerX - footerWidth/2, y);
+
+		// Abrir PDF en nueva pestaña para previsualización
+		const pdfBlob = doc.output('bloburl');
+		window.open(pdfBlob, '_blank');
+	}
+
+	// helpers
+	function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }	// Modal: ver hoja de vida del equipo
+	async function openEquipmentModal(serial){
+		$('#modal-equipment-title').textContent = `Hoja de vida - ${serial}`;
+		const container = $('#equipment-history');
+		container.innerHTML = '<div class="small" style="padding:10px">Cargando historial...</div>';
+		
+		const list = await loadEquipments();
+		const clients = await loadClients(); // Cargar clientes una sola vez
+		
+		const eq = list.find(e => e.serial && e.serial.toLowerCase() === serial.toLowerCase());
+		
+		container.innerHTML = ''; // Limpiar mensaje de carga
+		
+		if(!eq){
+			container.innerHTML = '<div class="history-item" style="padding:10px">No hay historial para este número de serie.</div>';
+		} else {
+			eq.history = eq.history || [];
+			
+			if(eq.history.length === 0) {
+				container.innerHTML = '<div class="history-item" style="padding:10px">No hay registros en el historial.</div>';
+			} else {
+				eq.history.forEach(h=>{
+					const client = clients.find(c => c.id === h.clientId) || {name:'--'};
+					const div = document.createElement('div');
+					div.className = 'history-item';
+					div.style.cssText = 'padding:10px;margin-bottom:8px;background:#051820;border-radius:4px;border-left:3px solid var(--accent)';
+					div.innerHTML = `<strong>${new Date(h.date).toLocaleString()}</strong> — ${escapeHtml(h.status||'')} — ${escapeHtml(h.failure||'')}<br><span class="small">Cliente: ${escapeHtml(client.name)} — Técnico: ${escapeHtml(h.technician||'')}</span>`;
+					container.appendChild(div);
+				});
+			}
+		}
+		
+		const modal = $('#modal-equipment');
+		modal.classList.add('show');
+	}		// Generar link de WhatsApp para una orden
+		async function generateWhatsAppLink(order){
+			const client = await findClientById(order.clientId) || {};
+			let phone = client.phone || '';
+			const normalized = normalizePhone(phone);
+			if(!normalized){
+				alert('Teléfono del cliente no disponible para enviar WhatsApp.');
+				return null;
+			}
+			const name = client.name || 'cliente';
+			const brand = order.brand || '';
+			const model = order.model || '';
+			const serial = order.serial || '';
+			const technician = order.technician || '';
+			const status = order.status || 'ingresado';
+			
+			// Asegurar que la orden tiene token antes de generar el enlace
+			if(!order.accessToken){
+				order.accessToken = generateAccessToken();
+			}
+			const publicLink = getPublicOrderLink(order);
+
+			let msg = '';
+			switch(status){
+				case 'en_reparacion':
+					msg = `Hola ${name}, te informamos que tu equipo (${brand} ${model}, S/N: ${serial}) está en reparación. Nuestro técnico ${technician || 'asignado'} está trabajando en la evaluación y reparación. Te avisaremos cuando haya novedades.\n\nPuedes ver el estado de tu orden aquí: ${publicLink}`;
+					break;
+				case 'espera_entrega':
+					msg = `Hola ${name}, tu equipo (${brand} ${model}, S/N: ${serial}) ya está listo y en espera de entrega en nuestro taller. Por favor pasa a recogerlo. Si necesitas coordinar la entrega, responde este mensaje.\n\nVer detalles: ${publicLink}`;
+					break;
+				case 'entregado':
+					msg = `Hola ${name}, confirmamos que tu equipo (${brand} ${model}, S/N: ${serial}) ha sido entregado. Muchas gracias por confiar en Mipc Computadores. Si tienes alguna inquietud, contáctanos.\n\nVer detalles: ${publicLink}`;
+					break;
+				case 'ingresado':
+				default:
+					msg = `Hola ${name}, tu equipo (${brand} ${model}, S/N: ${serial}) ha sido ingresado a nuestro taller. Puedes ver los detalles y seguimiento aquí: ${publicLink}. Pronto te informaremos sobre el estado.`;
+					break;
+			}
+
+			msg = `${msg}\n\n— Mipc Computadores`;
+
+			return `https://api.whatsapp.com/send?phone=${normalized}&text=${encodeURIComponent(msg)}&type=phone_number&app_absent=0`;
+		}
+
+		// Normaliza teléfono
+		function normalizePhone(phone){
+			phone = (phone||'').replace(/\D/g,'');
+			if(!phone) return null;
+			// eliminar ceros iniciales
+			phone = phone.replace(/^0+/, '');
+			// si no empieza con 57, agregarlo
+			if(!phone.startsWith('57')) phone = '57' + phone;
+			return phone;
+		}
+
+		// Finanzas: renderizado de transacciones (asíncrono)
+		async function renderFinance(){
+			const tbody = $('#transactions-table tbody');
+			const items = await loadTransactions();
+			tbody.innerHTML = '';
+			let totalIncome = 0, totalExpense = 0;
+			const typeFilter = ($('#type-filter') && $('#type-filter').value) || '';
+			const categoryFilter = ($('#category-filter') && $('#category-filter').value) || '';
+			const filtered = items.filter(t=>{
+				if(typeFilter && t.type !== typeFilter) return false;
+				if(categoryFilter && t.category !== categoryFilter) return false;
+				return true;
+			});
+			filtered.forEach(t=>{
+				if(t.type==='income') totalIncome += Number(t.amount||0);
+				else totalExpense += Number(t.amount||0);
+				const tr = document.createElement('tr');
+				tr.innerHTML = `
+					<td>${t.id}</td>
+					<td>${t.type==='income'?'Ingreso':'Gasto'}</td>
+					<td>${formatCurrency(Number(t.amount||0))}</td>
+					<td>${escapeHtml(t.category||'')}</td>
+					<td>${t.date || ''}</td>
+					<td>${escapeHtml(t.notes||'')}</td>
+					<td>
+						<button class="btn btn-delete" data-id="${t.id}">Eliminar</button>
+					</td>
+				`;
+				tbody.appendChild(tr);
+			});
+			$$('#transactions-table .btn-delete').forEach(b=> b.onclick = async ()=> { if(confirm('Eliminar transacción?')) await deleteTransaction(b.dataset.id) });
+
+			// Renderizar tarjetas para móvil
+			const cardsContainer = $('#transactions-cards-container');
+			if(cardsContainer){
+				cardsContainer.innerHTML = '';
+				filtered.forEach(t=>{
+					const isIncome = t.type === 'income';
+					const typeColor = isIncome ? '#7af0a5' : '#ff6b6b';
+					const typeIcon = isIncome ? '💵' : '💸';
+					const typeText = isIncome ? 'Ingreso' : 'Gasto';
+					const card = document.createElement('div');
+					card.className = 'data-card';
+					card.innerHTML = `
+						<div class="data-card-header">
+							<h4>${typeIcon} ${formatCurrency(Number(t.amount||0))}</h4>
+							<span class="badge" style="background:${typeColor};color:#04121a">${typeText}</span>
+						</div>
+						<div class="data-card-body">
+							<div class="data-card-row"><span class="label">🏷️ Categoría:</span><span class="value">${escapeHtml(t.category||'')}</span></div>
+							<div class="data-card-row"><span class="label">📅 Fecha:</span><span class="value">${t.date || ''}</span></div>
+							${t.notes ? `<div class="data-card-row"><span class="label">📝 Notas:</span><span class="value">${escapeHtml(t.notes)}</span></div>` : ''}
+						</div>
+						<div class="data-card-actions">
+							<button class="btn btn-delete card-btn-delete" data-id="${t.id}">🗑️ Eliminar</button>
+						</div>
+					`;
+					cardsContainer.appendChild(card);
+				});
+				$$('#transactions-cards-container .card-btn-delete').forEach(b=> b.onclick = async ()=> { if(confirm('¿Eliminar transacción?')) await deleteTransaction(b.dataset.id) });
+			}
+
+			const summary = $('#finance-summary');
+			const balance = totalIncome - totalExpense;
+			if(summary) summary.textContent = `Ingresos: ${formatCurrency(totalIncome)} — Gastos: ${formatCurrency(totalExpense)} — Saldo: ${formatCurrency(balance)}`;
+			await computeMetrics();
+		}
+
+		async function saveTransactionFromForm(e){
+			e.preventDefault();
+			const f = e.target;
+			const list = await loadTransactions();
+			const item = {
+				id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString().slice(-6),
+				type: f.type.value,
+				amount: Number(f.amount.value || 0),
+				category: f.category.value,
+				date: f.date.value || new Date().toISOString().slice(0,10),
+				notes: f.notes.value
+			};
+			list.unshift(item);
+			await saveTransactions(list);
+			// actualizar selects en caso de nueva categoría
+			await populateFinanceCategorySelects();
+			f.reset();
+			await renderFinance();
+		}
+
+		async function deleteTransaction(id){
+			const list = (await loadTransactions()).filter(x=>x.id!=id);
+			await saveTransactions(list);
+			// actualizar selects despues de eliminar
+			await populateFinanceCategorySelects();
+			await renderFinance();
+		}
+
+		//INVENTARIO
+		// Renderizar tabla de inventario
+		async function renderInventory(){
+			const tbody = document.querySelector('#inventory-table tbody');
+			if(!tbody) return;
+			const list = await loadInventory();
+			const filter = (document.getElementById('inv-filter')?.value || '').toLowerCase().trim();
+			const filtered = list.filter(i=>{
+				if(!filter) return true;
+				return [i.name, i.category, i.supplier].filter(Boolean).join(' ').toLowerCase().includes(filter);
+			});
+
+			tbody.innerHTML = '';
+			let totalUnits = 0;
+			let totalValue = 0;
+
+			filtered.forEach(item=>{
+				const stock = Number(item.stock||0);
+				const unitCost = Number(item.unitCost||0);
+				const unitPrice = Number(item.unitPrice||0);
+				totalUnits += stock;
+				totalValue += stock * unitCost;
+				const tr = document.createElement('tr');
+				tr.innerHTML = `
+					<td>${item.id}</td>
+					<td>${escapeHtml(item.name||'')}</td>
+					<td><span class="badge-cat">${escapeHtml(item.category||'')}</span></td>
+					<td>${stock}</td>
+					<td>${unitCost?formatCurrency(unitCost):'--'}</td>
+					<td>${unitPrice?formatCurrency(unitPrice):'--'}</td>
+					<td>${escapeHtml(item.supplier||'')}</td>
+					<td>${item.updatedAt ? new Date(item.updatedAt).toLocaleString() : ''}</td>
+					<td class="actions">
+						<button class="btn" data-id="${item.id}" data-act="in" title="Entrada" style="background:#7af0a5;color:#04121a">Entrada</button>
+						<button class="btn" data-id="${item.id}" data-act="out" title="Salida" style="background:#ffcc33;color:#04121a">Salida</button>
+						<button class="btn btn-edit" data-id="${item.id}" data-act="edit">Editar</button>
+						<button class="btn btn-delete" data-id="${item.id}" data-act="del">Eliminar</button>
+						<button class="btn" data-id="${item.id}" data-act="hist" style="background:#3bb4ff;color:#04121a">Historial</button>
+					</td>
+				`;
+				tbody.appendChild(tr);
+			});
+
+			// acciones tabla
+			tbody.querySelectorAll('button').forEach(btn=>{
+				const id = btn.getAttribute('data-id');
+				const act = btn.getAttribute('data-act');
+				if(act==='edit') btn.onclick = ()=> openInventoryItemModal(id);
+				if(act==='del') btn.onclick = async ()=> { if(confirm('Eliminar ítem?')) await deleteInventoryItem(id); };
+				if(act==='in') btn.onclick = ()=> openMovementModal(id, 'in');
+				if(act==='out') btn.onclick = ()=> openMovementModal(id, 'out');
+				if(act==='hist') btn.onclick = ()=> openMovementsHistory(id);
+			});
+
+			// Renderizar tarjetas para móvil
+			const cardsContainer = $('#inventory-cards-container');
+			if(cardsContainer){
+				cardsContainer.innerHTML = '';
+				filtered.forEach(item=>{
+					const stock = Number(item.stock||0);
+					const unitCost = Number(item.unitCost||0);
+					const unitPrice = Number(item.unitPrice||0);
+					const stockColor = stock > 5 ? '#7af0a5' : (stock > 0 ? '#ffcc33' : '#ff6b6b');
+					const card = document.createElement('div');
+					card.className = 'data-card';
+					card.innerHTML = `
+						<div class="data-card-header">
+							<h4>📦 ${escapeHtml(item.name||'')}</h4>
+							<span class="badge" style="background:#64707a">${escapeHtml(item.category||'')}</span>
+						</div>
+						<div class="data-card-body">
+							<div class="data-card-row"><span class="label">📊 Stock:</span><span class="value" style="color:${stockColor};font-weight:bold">${stock} unidades</span></div>
+							${unitCost ? `<div class="data-card-row"><span class="label">💵 Costo:</span><span class="value">${formatCurrency(unitCost)}</span></div>` : ''}
+							${unitPrice ? `<div class="data-card-row"><span class="label">💰 Precio:</span><span class="value">${formatCurrency(unitPrice)}</span></div>` : ''}
+							${item.supplier ? `<div class="data-card-row"><span class="label">🏭 Proveedor:</span><span class="value">${escapeHtml(item.supplier)}</span></div>` : ''}
+							${item.updatedAt ? `<div class="data-card-row"><span class="label">🕐 Actualizado:</span><span class="value">${new Date(item.updatedAt).toLocaleString()}</span></div>` : ''}
+						</div>
+						<div class="data-card-actions">
+							<button class="btn card-btn-in" data-id="${item.id}" style="background:#7af0a5;color:#04121a">⬆️ Entrada</button>
+							<button class="btn card-btn-out" data-id="${item.id}" style="background:#ffcc33;color:#04121a">⬇️ Salida</button>
+							<button class="btn btn-edit card-btn-edit" data-id="${item.id}">✏️ Editar</button>
+							<button class="btn btn-delete card-btn-del" data-id="${item.id}">🗑️ Eliminar</button>
+							<button class="btn card-btn-hist" data-id="${item.id}" style="background:#3bb4ff;color:#04121a">📜 Historial</button>
+						</div>
+					`;
+					cardsContainer.appendChild(card);
+				});
+				// Acciones tarjetas
+				$$('#inventory-cards-container .card-btn-edit').forEach(btn=> btn.onclick = ()=> openInventoryItemModal(btn.dataset.id));
+				$$('#inventory-cards-container .card-btn-del').forEach(btn=> btn.onclick = async ()=> { if(confirm('¿Eliminar ítem?')) await deleteInventoryItem(btn.dataset.id); });
+				$$('#inventory-cards-container .card-btn-in').forEach(btn=> btn.onclick = ()=> openMovementModal(btn.dataset.id, 'in'));
+				$$('#inventory-cards-container .card-btn-out').forEach(btn=> btn.onclick = ()=> openMovementModal(btn.dataset.id, 'out'));
+				$$('#inventory-cards-container .card-btn-hist').forEach(btn=> btn.onclick = ()=> openMovementsHistory(btn.dataset.id));
+			}
+
+			// resumen
+			const sum = document.getElementById('inventory-summary');
+			if(sum) sum.textContent = `Ítems: ${filtered.length} — Unidades: ${totalUnits} — Valor (costo): ${formatCurrency(totalValue)}`;
+		}
+
+		// Abrir modal para crear/editar ítem
+		async function openInventoryItemModal(id){
+			editingItemId = id || null;
+			const modal = document.getElementById('modal-inventory-item');
+			const form = document.getElementById('form-inventory-item');
+			document.getElementById('modal-inventory-title').textContent = id ? 'Editar ítem' : 'Nuevo ítem';
+			form.reset();
+			if(id){
+				const list = await loadInventory();
+				const it = list.find(x=>x.id===id);
+				if(it){
+					form.name.value = it.name || '';
+					form.category.value = it.category || '';
+					form.stock.value = Number(it.stock||0);
+					form.unitCost.value = it.unitCost ?? '';
+					form.unitPrice.value = it.unitPrice ?? '';
+					form.supplier.value = it.supplier || '';
+					form.notes.value = it.notes || '';
+				}
+			}
+			modal.classList.add('show');
+		}
+
+		// Guardar ítem (crear/editar)
+		async function saveInventoryItemFromForm(e){
+			e.preventDefault();
+			const f = e.target;
+			const list = await loadInventory();
+			const payload = {
+				name: f.name.value,
+				category: f.category.value,
+				stock: Number(f.stock.value||0),
+				unitCost: f.unitCost.value ? Number(f.unitCost.value) : null,
+				unitPrice: f.unitPrice.value ? Number(f.unitPrice.value) : null,
+				supplier: f.supplier.value,
+				notes: f.notes.value,
+				updatedAt: new Date().toISOString()
+			};
+			if(editingItemId){
+				const idx = list.findIndex(x=>x.id===editingItemId);
+				if(idx>-1){ list[idx] = {...list[idx], ...payload}; }
+			} else {
+				list.unshift({
+					id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString().slice(-6),
+					createdAt: new Date().toISOString(),
+					...payload
+				});
+			}
+			await saveInventory(list);
+			closeModal('#modal-inventory-item');
+			await renderInventory();
+		}
+
+		// Eliminar ítem de inventario
+		async function deleteInventoryItem(id){
+			const list = await loadInventory();
+			const newList = list.filter(x=>x.id!==id);
+			await saveInventory(newList);
+			// eliminar movimientos asociados
+			let movs = await loadInventoryMovements();
+			movs = movs.filter(m => m.itemId !== id);
+			await saveInventoryMovements(movs);
+			await renderInventory();
+		}
+
+		// Abrir modal de movimiento (entrada/salida)
+		async function openMovementModal(itemId, type){
+			currentMovementItemId = itemId;
+			currentMovementType = type; // 'in' | 'out'
+			const modal = document.getElementById('modal-movement');
+			const form = document.getElementById('form-movement');
+			form.reset();
+			form.itemId.value = itemId;
+			form.type.value = type;
+			const today = new Date().toISOString().slice(0,10);
+			form.date.value = today;
+			const list = await loadInventory();
+			const it = list.find(x=>x.id===itemId) || {};
+			document.getElementById('modal-movement-title').textContent = type==='in' ? `Entrada — ${it.name||''}` : `Salida — ${it.name||''}`;
+			const hint = document.getElementById('movement-hint');
+			if(hint){
+				const stock = Number(it.stock||0);
+				const txt = type==='in'
+					? `Stock actual: ${stock}. Usa "Valor unitario" como costo de compra.`
+					: `Stock actual: ${stock}. No puedes retirar más de ${stock}. Usa "Valor unitario" como precio de salida si aplica.`;
+				hint.textContent = txt;
+			}
+			modal.classList.add('show');
+		}
+
+		// Guardar movimiento
+		async function saveMovementFromForm(e){
+			e.preventDefault();
+			const f = e.target;
+			const itemId = f.itemId.value;
+			const type = f.type.value; // in | out
+			const qty = Math.max(1, Number(f.qty.value||0));
+			const unitValue = Number(f.unitValue.value||0);
+			const date = f.date.value || new Date().toISOString().slice(0,10);
+			const notes = f.notes.value || '';
+
+			const inv = await loadInventory();
+			const idx = inv.findIndex(x=>x.id===itemId);
+			if(idx===-1) return alert('Ítem no encontrado');
+			const currentStock = Number(inv[idx].stock||0);
+			if(type==='out' && qty > currentStock){
+				return alert('No hay suficiente stock para la salida.');
+			}
+			inv[idx].stock = type==='in' ? currentStock + qty : currentStock - qty;
+			inv[idx].updatedAt = new Date().toISOString();
+			await saveInventory(inv);
+
+			const movs = await loadInventoryMovements();
+			movs.unshift({
+				id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString().slice(-6),
+				itemId,
+				type,
+				qty,
+				unitPrice: unitValue || null,
+				total: unitValue ? unitValue * qty : null,
+				date,
+				notes
+			});
+			await saveInventoryMovements(movs);
+
+			closeModal('#modal-movement');
+			await renderInventory();
+		}
+
+		// Abrir historial de movimientos
+		async function openMovementsHistory(itemId){
+			const modal = document.getElementById('modal-movements-history');
+			const list = await loadInventoryMovements();
+			const filtered = list.filter(m => m.itemId === itemId);
+			const container = document.getElementById('movements-history');
+			container.innerHTML = '';
+			if(filtered.length===0){
+				container.textContent = 'Sin movimientos para este ítem.';
+			} else {
+				filtered.forEach(m => {
+					const div = document.createElement('div');
+					div.className = 'history-item';
+					const sign = m.type==='in' ? '+' : '-';
+					const label = m.type==='in' ? 'Entrada' : 'Salida';
+					const uv = m.unitPrice ? formatCurrency(Number(m.unitPrice)) : '--';
+					const tot = m.total ? formatCurrency(Number(m.total)) : '--';
+					div.innerHTML = `<strong>${label}</strong> ${sign}${m.qty} u. — u:${uv} — total:${tot} — <span class="small">${m.date||''}</span><br><span class="small">${escapeHtml(m.notes||'')}</span>`;
+					container.appendChild(div);
+				});
+			}
+			modal.classList.add('show');
+		}
+
+		function formatCurrency(v){
+			try {
+				return new Intl.NumberFormat('es-CO', { style:'currency', currency:'COP', maximumFractionDigits:2 }).format(v);
+			} catch(e){
+				return (v||0).toFixed(2);
+			}
+		}
+
+		// nuevas métricas (async)
+		async function computeMetrics(){
+			const tx = await loadTransactions();
+			const orders = await loadOrders();
+			const clients = await loadClients();
+			let income = 0, expense = 0;
+			tx.forEach(t => {
+				if(t.type === 'income') income += Number(t.amount||0);
+				else expense += Number(t.amount||0);
+			});
+			const balance = income - expense;
+			const txCount = tx.length;
+			const avgTx = txCount ? ((income + expense) / txCount) : 0;
+			const statusCounts = {};
+			Object.keys(ORDER_STATUSES).forEach(k => statusCounts[k] = 0);
+			let paidOrders = 0, unpaidOrders = 0;
+			orders.forEach(o => {
+				const s = o.status || 'ingresado';
+				statusCounts[s] = (statusCounts[s]||0) + 1;
+				if(o.paid) paidOrders++;
+				else unpaidOrders++;
+			});
+			const container = document.getElementById('finance-metrics');
+			if(!container) return;
+			container.innerHTML = `
+				<div style="background:#071b22;padding:10px;border-radius:8px;min-width:140px">
+					<div class="small">Ingresos</div>
+					<div style="font-weight:700">${formatCurrency(income)}</div>
+				</div>
+				<div style="background:#071b22;padding:10px;border-radius:8px;min-width:140px">
+					<div class="small">Gastos</div>
+					<div style="font-weight:700">${formatCurrency(expense)}</div>
+				</div>
+				<div style="background:#071b22;padding:10px;border-radius:8px;min-width:140px">
+					<div class="small">Saldo</div>
+					<div style="font-weight:700">${formatCurrency(balance)}</div>
+				</div>
+				<div style="background:#071b22;padding:10px;border-radius:8px;min-width:140px">
+					<div class="small">Transacciones</div>
+					<div style="font-weight:700">${txCount}</div>
+					<div class="small">Promedio: ${formatCurrency(avgTx)}</div>
+				</div>
+				<div style="background:#071b22;padding:10px;border-radius:8px;min-width:180px">
+					<div class="small">Órdenes</div>
+					<div style="font-weight:700">${orders.length}</div>
+					<div class="small">Clientes: ${clients.length}</div>
+					<div class="small">Pagadas: ${paidOrders} / No pagadas: ${unpaidOrders}</div>
+				</div>
+				<div style="background:#071b22;padding:10px;border-radius:8px;min-width:220px">
+					<div class="small">Desglose por estado (órdenes)</div>
+					<div style="font-weight:600;margin-top:6px">
+						${Object.keys(ORDER_STATUSES).map(k => `${ORDER_STATUSES[k]}: ${statusCounts[k]||0}`).join(' — ')}
+					</div>
+				</div>
+			`;
+		}
+
+		// nueva función: cambiar estado de pago (async)
+		async function toggleOrderPayment(id){
+			const list = await loadOrders();
+			const idx = list.findIndex(x=>x.id==id);
+			if(idx===-1) return;
+			
+			const order = list[idx];
+			const wasPaid = order.paid;
+			
+			list[idx].paid = !wasPaid;
+			await saveOrders(list);
+			
+			if(!wasPaid && list[idx].paid && order.price && Number(order.price) > 0){
+				const client = (await loadClients()).find(c=>c.id==order.clientId) || {name:'Cliente'};
+				const transactions = await loadTransactions();
+				
+				const transaction = {
+					id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString().slice(-6),
+					type: 'income',
+					amount: Number(order.price),
+					category: 'Servicios',
+					date: new Date().toISOString().slice(0,10),
+					notes: `Pago orden ${order.id} — ${client.name}`,
+					orderId: order.id
+				};
+				
+				transactions.unshift(transaction);
+				await saveTransactions(transactions);
+			}
+			
+			if(wasPaid && !list[idx].paid){
+				let transactions = await loadTransactions();
+				const initialCount = transactions.length;
+				transactions = transactions.filter(t => {
+					const linkedByOrderId = t.orderId && t.orderId === order.id;
+					const linkedByNotes = t.notes && t.notes.includes(`orden ${order.id}`);
+					return !(linkedByOrderId || linkedByNotes);
+				});
+				
+				if(transactions.length < initialCount){
+					await saveTransactions(transactions);
+					console.log(`Transacción eliminada para orden ${order.id}`);
+				}
+			}
+			
+			await renderOrders();
+			await renderFinance();
+			await computeMetrics();
+		}
+
+		// nueva función: generar token de acceso aleatorio
+		function generateAccessToken(){
+			const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+			let token = '';
+			for(let i = 0; i < 16; i++){
+				token += chars.charAt(Math.floor(Math.random() * chars.length));
+			}
+			return token;
+		}
+
+		// nueva función: obtener enlace público de la orden
+		function getPublicOrderLink(order){
+			if(!order.accessToken){
+				// si la orden no tiene token, generarlo (para órdenes antiguas)
+				order.accessToken = generateAccessToken();
+			}
+			const baseUrl = window.location.origin + window.location.pathname.replace('index.html', '');
+			return `${baseUrl}orden.html?token=${order.accessToken}`;
+		}
+
+		// nueva función: copiar enlace público al portapapeles
+		async function copyPublicLink(id){
+			const orders = await loadOrders();
+			const order = orders.find(o=>o.id==id);
+			if(!order) return alert('Orden no encontrada');
+			
+			// generar token si no existe
+			if(!order.accessToken){
+				order.accessToken = generateAccessToken();
+				await saveOrders(orders);
+			}
+			
+			const link = getPublicOrderLink(order);
+			
+			try {
+				await navigator.clipboard.writeText(link);
+				alert('Enlace copiado al portapapeles:\n' + link);
+			} catch(err){
+				// fallback para navegadores que no soportan clipboard API
+				const textarea = document.createElement('textarea');
+				textarea.value = link;
+				textarea.style.position = 'fixed';
+				textarea.style.opacity = '0';
+				document.body.appendChild(textarea);
+				textarea.select();
+				document.execCommand('copy');
+				document.body.removeChild(textarea);
+				alert('Enlace copiado al portapapeles:\n' + link);
+			}
+		}
+
+		// Abrir WhatsApp para la orden (usa siempre el teléfono guardado en el cliente y prefijo 57)
+		async function openWhatsApp(id){
+			try {
+				const orders = await loadOrders();
+				const order = orders.find(o=>o.id==id);
+				if(!order) return alert('Orden no encontrada');
+				
+				// generar token si no existe
+				if(!order.accessToken){
+					order.accessToken = generateAccessToken();
+					// actualizar la orden en la lista y guardar
+					const idx = orders.findIndex(x=>x.id==id);
+					if(idx>-1){
+					orders[idx] = order;
+						await saveOrders(orders);
+					}
+				}
+				
+				const link = await generateWhatsAppLink(order);
+				if(!link) return;
+				window.open(link, '_blank');
+			} catch(error) {
+				console.error('Error en openWhatsApp:', error);
+				alert('Error al generar el enlace de WhatsApp. Por favor, inténtalo de nuevo.');
+			}
+		}
+
+		/* NUEVO: render de facturas */
+		async function renderInvoices(){
+			const tbody = document.querySelector('#invoices-table tbody');
+			if(!tbody) return;
+			const invoices = await loadInvoices();
+			const clients = await loadClients();
+			const filter = (document.getElementById('invoice-filter')?.value || '').toLowerCase().trim();
+			
+			const filtered = invoices.filter(inv=>{
+				if(!filter) return true;
+				const client = clients.find(c=>c.id===inv.clientId) || {};
+				return [inv.invoiceNumber, client.name].join(' ').toLowerCase().includes(filter);
+			});
+
+			tbody.innerHTML = '';
+			let totalAmount = 0;
+			let paidCount = 0;
+
+			filtered.forEach(inv=>{
+				const client = clients.find(c=>c.id===inv.clientId) || {name:'--'};
+				const subtotal = Number(inv.subtotal || 0);
+				const tax = Number(inv.tax || 0);
+				const total = Number(inv.total || 0);
+				totalAmount += total;
+				
+				let statusBadge = '<span class="badge-status-unpaid">No pagada</span>';
+				if(inv.paymentStatus === 'paid'){
+					statusBadge = '<span class="badge-status-paid">Pagada</span>';
+					paidCount++;
+				} else if(inv.paymentStatus === 'partial'){
+					statusBadge = '<span class="badge-status-partial">Pago parcial</span>';
+				}
+
+				const tr = document.createElement('tr');
+				tr.innerHTML = `
+					<td><strong>${escapeHtml(inv.invoiceNumber||'')}</strong></td>
+					<td>${escapeHtml(client.name)}</td>
+					<td>${inv.date || ''}</td>
+					<td>${formatCurrency(subtotal)}</td>
+					<td>${formatCurrency(tax)}</td>
+					<td><strong>${formatCurrency(total)}</strong></td>
+					<td>${statusBadge}</td>
+					<td class="actions">
+						<button class="btn" data-id="${inv.id}" data-act="pdf" style="background:#7af0a5;color:#04121a">PDF</button>
+						<button class="btn btn-edit" data-id="${inv.id}" data-act="edit">Editar</button>
+						<button class="btn btn-delete" data-id="${inv.id}" data-act="del">Eliminar</button>
+					</td>
+				`;
+				tbody.appendChild(tr);
+			});
+
+			// acciones tabla
+			tbody.querySelectorAll('button').forEach(btn=>{
+				const id = btn.getAttribute('data-id');
+				const act = btn.getAttribute('data-act');
+				if(act==='edit') btn.onclick = ()=> openInvoiceModal(id);
+				if(act==='del') btn.onclick = async ()=> { if(confirm('Eliminar factura?')) await deleteInvoice(id); };
+				if(act==='pdf') btn.onclick = async ()=> await exportInvoicePDF(id);
+			});
+
+			// Renderizar tarjetas para móvil
+			const cardsContainer = $('#invoices-cards-container');
+			if(cardsContainer){
+				cardsContainer.innerHTML = '';
+				filtered.forEach(inv=>{
+					const client = clients.find(c=>c.id===inv.clientId) || {name:'--'};
+					const subtotal = Number(inv.subtotal || 0);
+					const tax = Number(inv.tax || 0);
+					const total = Number(inv.total || 0);
+					
+					let statusBadge, statusColor, statusIcon;
+					if(inv.paymentStatus === 'paid'){
+						statusBadge = 'Pagada';
+						statusColor = '#7af0a5';
+						statusIcon = '✅';
+					} else if(inv.paymentStatus === 'partial'){
+						statusBadge = 'Pago parcial';
+						statusColor = '#ffcc33';
+						statusIcon = '⚠️';
+					} else {
+						statusBadge = 'No pagada';
+						statusColor = '#ff6b6b';
+						statusIcon = '❌';
+					}
+
+					const card = document.createElement('div');
+					card.className = 'data-card';
+					card.innerHTML = `
+						<div class="data-card-header">
+							<h4>🧾 ${escapeHtml(inv.invoiceNumber||'')}</h4>
+							<span class="badge" style="background:${statusColor};color:#04121a">${statusIcon} ${statusBadge}</span>
+						</div>
+						<div class="data-card-body">
+							<div class="data-card-row"><span class="label">👤 Cliente:</span><span class="value">${escapeHtml(client.name)}</span></div>
+							<div class="data-card-row"><span class="label">📅 Fecha:</span><span class="value">${inv.date || ''}</span></div>
+							<div class="data-card-row"><span class="label">📄 Subtotal:</span><span class="value">${formatCurrency(subtotal)}</span></div>
+							<div class="data-card-row"><span class="label">🧾 IVA:</span><span class="value">${formatCurrency(tax)}</span></div>
+							<div class="data-card-row"><span class="label">💰 Total:</span><span class="value" style="font-weight:bold;font-size:1.1em;color:#7af0a5">${formatCurrency(total)}</span></div>
+						</div>
+						<div class="data-card-actions">
+							<button class="btn card-btn-pdf" data-id="${inv.id}" style="background:#7af0a5;color:#04121a">📄 PDF</button>
+							<button class="btn btn-edit card-btn-edit" data-id="${inv.id}">✏️ Editar</button>
+							<button class="btn btn-delete card-btn-del" data-id="${inv.id}">🗑️ Eliminar</button>
+						</div>
+					`;
+					cardsContainer.appendChild(card);
+				});
+				// Acciones tarjetas
+				$$('#invoices-cards-container .card-btn-edit').forEach(btn=> btn.onclick = ()=> openInvoiceModal(btn.dataset.id));
+				$$('#invoices-cards-container .card-btn-del').forEach(btn=> btn.onclick = async ()=> { if(confirm('¿Eliminar factura?')) await deleteInvoice(btn.dataset.id); });
+				$$('#invoices-cards-container .card-btn-pdf').forEach(btn=> btn.onclick = async ()=> await exportInvoicePDF(btn.dataset.id));
+			}
+
+			const sum = document.getElementById('invoices-summary');
+			if(sum) sum.textContent = `Facturas: ${filtered.length} — Pagadas: ${paidCount} — Total facturado: ${formatCurrency(totalAmount)}`;
+		}
+
+		/* NUEVO: abrir modal de factura */
+		async function openInvoiceModal(id){
+			editingInvoiceId = id || null;
+			const modal = document.getElementById('modal-invoice');
+			const form = document.getElementById('form-invoice');
+			document.getElementById('modal-invoice-title').textContent = id ? 'Editar factura' : 'Nueva factura';
+			
+			form.reset();
+			form.date.value = new Date().toISOString().slice(0,10);
+			
+			// poblar selector de clientes
+			const clientSelect = form.querySelector('select[name="clientId"]');
+			const clients = await loadClients();
+			clientSelect.innerHTML = '<option value="">-- Seleccionar cliente --</option>';
+			clients.forEach(c => {
+				const opt = document.createElement('option');
+				opt.value = c.id;
+				opt.textContent = c.name;
+				clientSelect.appendChild(opt);
+			});
+
+			if(id){
+				const invoices = await loadInvoices();
+				const inv = invoices.find(x=>x.id==id);
+				if(inv){
+					form.clientId.value = inv.clientId || '';
+					form.invoiceNumber.value = inv.invoiceNumber || '';
+					form.date.value = inv.date || '';
+					form.paymentStatus.value = inv.paymentStatus || 'unpaid';
+					form.notes.value = inv.notes || '';
+					invoiceItems = inv.items ? [...inv.items] : [];
+				}
+			} else {
+				// generar número de factura
+				const invoices = await loadInvoices();
+				const lastNumber = invoices.length > 0 ? Math.max(...invoices.map(i => {
+					const num = i.invoiceNumber ? parseInt(i.invoiceNumber.replace(/\D/g, '')) : 0;
+					return isNaN(num) ? 0 : num;
+				})) : 0;
+				form.invoiceNumber.value = `FAC-${String(lastNumber + 1).padStart(6, '0')}`;
+				invoiceItems = [];
+			}
+
+			renderInvoiceItems();
+			modal.classList.add('show');
+		}
+
+		/* NUEVO: agregar fila de ítem */
+		function addInvoiceItemRow(){
+			invoiceItems.push({
+				id: Date.now().toString(),
+				description: '',
+				inventoryItemId: '',
+				quantity: 1,
+				unitPrice: 0,
+				total: 0
+			});
+			renderInvoiceItems();
+		}
+
+		/* NUEVO: renderizar ítems de factura */
+		async function renderInvoiceItems(){
+			const container = document.getElementById('invoice-items-list');
+			container.innerHTML = '';
+			
+			const inventory = await loadInventory();
+
+			invoiceItems.forEach((item, index) => {
+				const div = document.createElement('div');
+				div.className = 'invoice-item-row';
+				
+				// selector de inventario
+				let inventorySelect = '<select data-index="' + index + '" class="item-inventory">';
+				inventorySelect += '<option value="">-- Manual --</option>';
+				inventory.forEach(inv => {
+					const selected = inv.id === item.inventoryItemId ? ' selected' : '';
+					const stock = Number(inv.stock || 0);
+					const price = inv.unitPrice ? formatCurrency(Number(inv.unitPrice)) : '';
+					inventorySelect += `<option value="${inv.id}" data-price="${inv.unitPrice||0}" data-stock="${stock}"${selected}>${escapeHtml(inv.name)} (Stock: ${stock}, ${price})</option>`;
+				});
+				inventorySelect += '</select>';
+
+				div.innerHTML = `
+					${inventorySelect}
+					<input type="text" placeholder="Descripción" value="${escapeHtml(item.description||'')}" data-index="${index}" class="item-description">
+					<input type="number" placeholder="Cant." min="1" step="1" value="${item.quantity||1}" data-index="${index}" class="item-quantity" style="max-width:80px">
+					<input type="number" placeholder="Precio u." min="0" step="0.01" value="${item.unitPrice||0}" data-index="${index}" class="item-price" style="max-width:120px">
+					<div class="small item-total-display" data-index="${index}" style="max-width:120px">Total: ${formatCurrency(item.total||0)}</div>
+					<button type="button" class="btn btn-delete" data-index="${index}" style="padding:6px 10px">✕</button>
+				`;
+				
+				container.appendChild(div);
+			});
+
+			// bindings
+			$$('.item-inventory').forEach(sel => {
+				sel.onchange = (e) => {
+					const idx = parseInt(e.target.dataset.index);
+					const selectedOpt = e.target.options[e.target.selectedIndex];
+					if(selectedOpt.value){
+						const invItem = inventory.find(i => i.id === selectedOpt.value);
+						if(invItem){
+							invoiceItems[idx].inventoryItemId = invItem.id;
+							invoiceItems[idx].description = invItem.name;
+							invoiceItems[idx].unitPrice = Number(invItem.unitPrice || 0);
+							updateItemTotal(idx);
+							renderInvoiceItems();
+						}
+					} else {
+						invoiceItems[idx].inventoryItemId = '';
+					}
+				};
+			});
+
+			$$('.item-description').forEach(inp => {
+				inp.oninput = (e) => {
+					const idx = parseInt(e.target.dataset.index);
+					invoiceItems[idx].description = e.target.value;
+				};
+			});
+
+			$$('.item-quantity').forEach(inp => {
+				inp.oninput = (e) => {
+					const idx = parseInt(e.target.dataset.index);
+					invoiceItems[idx].quantity = Number(e.target.value) || 1;
+					updateItemTotal(idx);
+					// Actualizar solo el display del total de este item
+					const totalDisplay = document.querySelector(`.item-total-display[data-index="${idx}"]`);
+					if(totalDisplay) totalDisplay.textContent = `Total: ${formatCurrency(invoiceItems[idx].total||0)}`;
+					updateInvoiceTotals();
+				};
+			});
+
+			$$('.item-price').forEach(inp => {
+				inp.oninput = (e) => {
+					const idx = parseInt(e.target.dataset.index);
+					invoiceItems[idx].unitPrice = Number(e.target.value) || 0;
+					updateItemTotal(idx);
+					// Actualizar solo el display del total de este item
+					const totalDisplay = document.querySelector(`.item-total-display[data-index="${idx}"]`);
+					if(totalDisplay) totalDisplay.textContent = `Total: ${formatCurrency(invoiceItems[idx].total||0)}`;
+					updateInvoiceTotals();
+				};
+			});
+
+			$$('.invoice-item-row .btn-delete').forEach(btn => {
+				btn.onclick = (e) => {
+					const idx = parseInt(e.target.dataset.index);
+					invoiceItems.splice(idx, 1);
+					renderInvoiceItems();
+				};
+			});
+
+			updateInvoiceTotals();
+		}
+
+		/* NUEVO: actualizar total de un ítem */
+		function updateItemTotal(index){
+			const item = invoiceItems[index];
+			item.total = (item.quantity || 0) * (item.unitPrice || 0);
+		}
+
+		/* NUEVO: actualizar totales de la factura */
+		function updateInvoiceTotals(){
+			const subtotal = invoiceItems.reduce((sum, item) => sum + (item.total || 0), 0);
+			const total = subtotal; // Sin IVA
+
+			$('#invoice-subtotal').textContent = formatCurrency(subtotal);
+			$('#invoice-total').textContent = formatCurrency(total);
+		}
+
+		/* NUEVO: guardar factura */
+		async function saveInvoiceFromForm(e){
+			e.preventDefault();
+			const f = e.target;
+
+			if(invoiceItems.length === 0){
+				alert('Debes agregar al menos un ítem a la factura');
+				return;
+			}
+
+			const subtotal = invoiceItems.reduce((sum, item) => sum + (item.total || 0), 0);
+			const total = subtotal; // Sin IVA
+
+			const invoices = await loadInvoices();
+
+			if(editingInvoiceId){
+				const idx = invoices.findIndex(x=>x.id==editingInvoiceId);
+				if(idx>-1){
+					invoices[idx] = {
+						...invoices[idx],
+						clientId: f.clientId.value,
+						invoiceNumber: f.invoiceNumber.value,
+						date: f.date.value,
+						paymentStatus: f.paymentStatus.value,
+						notes: f.notes.value,
+						items: invoiceItems,
+						subtotal,
+						total,
+						updatedAt: new Date().toISOString()
+					};
+				}
+			} else {
+				const invoice = {
+					id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString().slice(-6),
+					clientId: f.clientId.value,
+					invoiceNumber: f.invoiceNumber.value,
+					date: f.date.value,
+					paymentStatus: f.paymentStatus.value,
+					notes: f.notes.value,
+					items: invoiceItems,
+					subtotal,
+					total,
+					createdAt: new Date().toISOString(),
+					updatedAt: new Date().toISOString()
+				};
+				invoices.unshift(invoice);
+
+				// descontar inventario y registrar en finanzas según checkbox
+				const registerInFinance = f.registerInFinance ? f.registerInFinance.checked : true;
+				await processInvoiceInventoryAndFinance(invoice, registerInFinance);
+			}
+
+			await saveInvoices(invoices);
+			closeModal('#modal-invoice');
+			await renderInvoices();
+			await renderInventory();
+			await renderFinance();
+		}
+
+		/* NUEVO: exportar factura a PDF */
+		async function exportInvoicePDF(id){
+			const invoices = await loadInvoices();
+			const invoice = invoices.find(i => i.id === id);
+			if(!invoice) return alert('Factura no encontrada');
+
+			const clients = await loadClients();
+			const client = clients.find(c => c.id === invoice.clientId) || {name:'--', cedula:'', phone:'', email:'', address:''};
+
+			const { jsPDF } = window.jspdf;
+			const doc = new jsPDF({unit:'pt', format:'letter'});
+			const pageWidth = doc.internal.pageSize.width;
+			const margin = 40;
+			const centerX = pageWidth / 2;
+			let y = 40;
+
+			// Logo
+			try {
+				const logoImage = await loadImageFromUrl('./image.png');
+				const logoSize = 50;
+				doc.addImage(logoImage, 'PNG', margin, y, logoSize, logoSize);
+			} catch(err) {
+				console.error('Error cargando logo:', err);
+			}
+
+			// Título y número de factura
+			doc.setFontSize(20);
+			doc.setFont(undefined, 'bold');
+			doc.text('FACTURA', pageWidth - margin - 100, y + 20);
+			doc.setFontSize(12);
+			doc.setFont(undefined, 'normal');
+			doc.text(invoice.invoiceNumber || '', pageWidth - margin - 100, y + 40);
+
+			y += 70;
+
+			// Información de la empresa (izquierda)
+			doc.setFontSize(10);
+			doc.setFont(undefined, 'bold');
+			doc.text('MIPC COMPUTADORES', margin, y);
+			y += 15;
+			doc.setFont(undefined, 'normal');
+			doc.text('Cel: 3202307508', margin, y);
+			y += 12;
+			doc.text('Email: mipcbarbosa@hotmail.com', margin, y);
+
+			// Información del cliente (derecha)
+			y = 110;
+			const rightX = centerX + 20;
+			doc.setFont(undefined, 'bold');
+			doc.text('CLIENTE:', rightX, y);
+			y += 15;
+			doc.setFont(undefined, 'normal');
+			doc.text(client.name, rightX, y);
+			y += 12;
+			if(client.cedula) { doc.text(`Cédula: ${client.cedula}`, rightX, y); y += 12; }
+			if(client.phone) { doc.text(`Tel: ${client.phone}`, rightX, y); y += 12; }
+			if(client.email) { doc.text(`Email: ${client.email}`, rightX, y); y += 12; }
+
+			y = Math.max(y, 180) + 20;
+
+			// Fecha
+			doc.setFont(undefined, 'bold');
+			doc.text(`Fecha: `, margin, y);
+			doc.setFont(undefined, 'normal');
+			doc.text(invoice.date || '', margin + 50, y);
+
+			y += 40;
+
+			// Tabla de ítems (sin líneas)
+			doc.setFontSize(9);
+			doc.setFont(undefined, 'bold');
+			
+			const colX = [margin, margin + 250, margin + 320, margin + 400, margin + 480];
+			doc.text('Descripción', colX[0], y);
+			doc.text('Cant.', colX[1], y);
+			doc.text('Precio u.', colX[2], y);
+			doc.text('Total', colX[3], y);
+			
+			y += 20;
+			
+			doc.setFont(undefined, 'normal');
+			
+			invoice.items.forEach(item => {
+				if(y > 700){
+					doc.addPage();
+					y = 40;
+				}
+				
+				doc.text(item.description || '', colX[0], y, {maxWidth: 240});
+				doc.text(String(item.quantity || 0), colX[1], y);
+				doc.text(formatCurrency(item.unitPrice || 0), colX[2], y);
+				doc.text(formatCurrency(item.total || 0), colX[3], y);
+				
+				y += 20;
+			});
+
+			y += 25;
+
+			// Totales - Sin líneas
+			const totalsLabelX = pageWidth - 180;
+			const totalsValueX = pageWidth - margin;
+			
+			doc.setFontSize(10);
+			doc.setFont(undefined, 'normal');
+			doc.text('Subtotal:', totalsLabelX, y);
+			doc.text(formatCurrency(invoice.subtotal || 0), totalsValueX, y, {align: 'right'});
+			y += 25;
+			
+			doc.setFont(undefined, 'bold');
+			doc.setFontSize(12);
+			doc.text('TOTAL:', totalsLabelX, y);
+			doc.text(formatCurrency(invoice.total || 0), totalsValueX, y, {align: 'right'});
+
+			// Notas
+			if(invoice.notes){
+				y += 30;
+				doc.setFontSize(9);
+				doc.setFont(undefined, 'bold');
+				doc.text('Notas:', margin, y);
+				y += 12;
+				doc.setFont(undefined, 'normal');
+				const notesLines = doc.splitTextToSize(invoice.notes, pageWidth - margin * 2);
+				doc.text(notesLines, margin, y);
+			}
+
+			// Footer
+			y = 750;
+			doc.setFontSize(8);
+			doc.setFont(undefined, 'italic');
+			const footerText = 'Gracias por su compra - Mipc Computadores';
+			const footerWidth = doc.getTextWidth(footerText);
+			doc.text(footerText, centerX - footerWidth/2, y);
+
+			// Abrir PDF en nueva pestaña para previsualización
+			const pdfBlob = doc.output('bloburl');
+			window.open(pdfBlob, '_blank');
+		}
+
+		// ========== DASHBOARD & ANALYTICS ==========
+		let ordersStatusChart, financialChart, ordersTimelineChart, topProductsChart;
+
+		async function renderDashboard() {
+			const orders = await loadOrders();
+			const transactions = await loadTransactions();
+			const inventory = await loadInventory();
+			const invoices = await loadInvoices();
+			const clients = await loadClients();
+			const movements = await loadInventoryMovements();
+
+			// Calcular métricas
+			const totalOrders = orders.length;
+			const activeOrders = orders.filter(o => {
+				const status = o.status || 'ingresado';
+				return status !== 'entregado';
+			}).length;
+
+			// Desglose de órdenes activas
+			const ingresadas = orders.filter(o => (o.status || 'ingresado') === 'ingresado').length;
+			const enReparacion = orders.filter(o => o.status === 'en_reparacion').length;
+			const enEspera = orders.filter(o => o.status === 'espera_entrega').length;
+
+			// Ingresos del mes actual
+			const now = new Date();
+			const currentMonth = now.getMonth();
+			const currentYear = now.getFullYear();
+			const incomeTransactions = transactions.filter(t => {
+				if(t.type !== 'income') return false;
+				const tDate = new Date(t.date);
+				return tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear;
+			});
+			const totalIncome = incomeTransactions.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+
+			// Valor del inventario
+			const inventoryValue = inventory.reduce((sum, item) => {
+				const stock = Number(item.stock || 0);
+				const cost = Number(item.unitCost || 0);
+				return sum + (stock * cost);
+			}, 0);
+			const totalItems = inventory.length;
+			const totalUnits = inventory.reduce((sum, item) => sum + Number(item.stock || 0), 0);
+
+			// Actualizar tarjetas estadísticas
+			$('#stat-total-orders').textContent = totalOrders;
+			$('#stat-active-orders').textContent = activeOrders;
+			$('#stat-active-breakdown').textContent = `${ingresadas} ingresadas • ${enReparacion} en reparación • ${enEspera} en espera`;
+			$('#stat-income').textContent = formatCurrency(totalIncome);
+			$('#stat-inventory').textContent = formatCurrency(inventoryValue);
+			$('#stat-inventory-items').textContent = `${totalItems} ítems • ${totalUnits} unidades`;
+
+			// Gráficos
+			renderOrdersStatusChart(orders);
+			renderFinancialChart(transactions);
+			renderOrdersTimelineChart(orders);
+			renderTopProductsChart(inventory, movements);
+		}
+
+		function renderOrdersStatusChart(orders) {
+			const statuses = {
+				'ingresado': 0,
+				'en_reparacion': 0,
+				'espera_entrega': 0,
+				'entregado': 0
+			};
+
+			orders.forEach(o => {
+				const status = o.status || 'ingresado';
+				if(statuses.hasOwnProperty(status)) {
+					statuses[status]++;
+				}
+			});
+
+			const ctx = document.getElementById('ordersStatusChart');
+			if(!ctx) return;
+
+			if(ordersStatusChart) ordersStatusChart.destroy();
+
+			ordersStatusChart = new Chart(ctx, {
+				type: 'doughnut',
+				data: {
+					labels: ['Ingresado', 'En Reparación', 'Espera Entrega', 'Entregado'],
+					datasets: [{
+						data: [statuses.ingresado, statuses.en_reparacion, statuses.espera_entrega, statuses.entregado],
+						backgroundColor: [
+							'#3bb4ff',
+							'#ffcc33',
+							'#ff9f43',
+							'#7af0a5'
+						],
+						borderColor: '#0f2430',
+						borderWidth: 2
+					}]
+				},
+				options: {
+					responsive: true,
+					maintainAspectRatio: false,
+					plugins: {
+						legend: {
+							position: 'bottom',
+							labels: {
+								color: '#e6eef3',
+								padding: 15,
+								font: { size: 12 }
+							}
+						},
+						title: {
+							display: false
+						}
+					}
+				}
+			});
+		}
+
+		function renderFinancialChart(transactions) {
+			// Últimos 7 días
+			const days = [];
+			const income = [];
+			const expenses = [];
+
+			for(let i = 6; i >= 0; i--) {
+				const date = new Date();
+				date.setDate(date.getDate() - i);
+				const dateStr = date.toISOString().slice(0, 10);
+				days.push(dateStr);
+
+				const dayIncome = transactions
+					.filter(t => t.type === 'income' && t.date === dateStr)
+					.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+				
+				const dayExpenses = transactions
+					.filter(t => t.type === 'expense' && t.date === dateStr)
+					.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+
+				income.push(dayIncome);
+				expenses.push(dayExpenses);
+			}
+
+			const ctx = document.getElementById('financialChart');
+			if(!ctx) return;
+
+			if(financialChart) financialChart.destroy();
+
+			financialChart = new Chart(ctx, {
+				type: 'bar',
+				data: {
+					labels: days.map(d => {
+						const date = new Date(d + 'T00:00:00');
+						return date.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' });
+					}),
+					datasets: [
+						{
+							label: 'Ingresos',
+							data: income,
+							backgroundColor: '#7af0a5',
+							borderColor: '#7af0a5',
+							borderWidth: 1
+						},
+						{
+							label: 'Gastos',
+							data: expenses,
+							backgroundColor: '#ff6b6b',
+							borderColor: '#ff6b6b',
+							borderWidth: 1
+						}
+					]
+				},
+				options: {
+					responsive: true,
+					maintainAspectRatio: false,
+					plugins: {
+						legend: {
+							labels: {
+								color: '#e6eef3',
+								font: { size: 12 }
+							}
+						}
+					},
+					scales: {
+						y: {
+							beginAtZero: true,
+							ticks: {
+								color: '#9aa5b1',
+								callback: function(value) {
+									return '$' + value.toLocaleString();
+								}
+							},
+							grid: {
+								color: 'rgba(255, 255, 255, 0.05)'
+							}
+						},
+						x: {
+							ticks: {
+								color: '#9aa5b1'
+							},
+							grid: {
+								color: 'rgba(255, 255, 255, 0.05)'
+							}
+						}
+					}
+				}
+			});
+		}
+
+		function renderOrdersTimelineChart(orders) {
+			// Últimos 6 meses
+			const months = [];
+			const orderCounts = [];
+
+			for(let i = 5; i >= 0; i--) {
+				const date = new Date();
+				date.setMonth(date.getMonth() - i);
+				const monthStr = date.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' });
+				months.push(monthStr);
+
+				const count = orders.filter(o => {
+					const orderDate = new Date(o.date);
+					return orderDate.getMonth() === date.getMonth() && orderDate.getFullYear() === date.getFullYear();
+				}).length;
+
+				orderCounts.push(count);
+			}
+
+			const ctx = document.getElementById('ordersTimelineChart');
+			if(!ctx) return;
+
+			if(ordersTimelineChart) ordersTimelineChart.destroy();
+
+			ordersTimelineChart = new Chart(ctx, {
+				type: 'line',
+				data: {
+					labels: months,
+					datasets: [{
+						label: 'Órdenes',
+						data: orderCounts,
+						borderColor: '#c7ff00',
+						backgroundColor: 'rgba(199, 255, 0, 0.1)',
+						borderWidth: 3,
+						fill: true,
+						tension: 0.4,
+						pointRadius: 5,
+						pointBackgroundColor: '#c7ff00',
+						pointBorderColor: '#0f2430',
+						pointBorderWidth: 2
+					}]
+				},
+				options: {
+					responsive: true,
+					maintainAspectRatio: false,
+					plugins: {
+						legend: {
+							display: false
+						}
+					},
+					scales: {
+						y: {
+							beginAtZero: true,
+							ticks: {
+								color: '#9aa5b1',
+								stepSize: 1
+							},
+							grid: {
+								color: 'rgba(255, 255, 255, 0.05)'
+							}
+						},
+						x: {
+							ticks: {
+								color: '#9aa5b1'
+							},
+							grid: {
+								color: 'rgba(255, 255, 255, 0.05)'
+							}
+						}
+					}
+				}
+			});
+		}
+
+		function renderTopProductsChart(inventory, movements) {
+			// Contar salidas por producto del inventario
+			const productCounts = {};
+
+			// Filtrar solo movimientos de salida (out)
+			const outMovements = movements.filter(m => m.type === 'out');
+
+			outMovements.forEach(m => {
+				const itemId = m.itemId;
+				const quantity = Number(m.quantity || 0);
+				
+				// Buscar el item en el inventario
+				const item = inventory.find(i => i.id === itemId);
+				if(item) {
+					const productName = item.name || 'Sin nombre';
+					productCounts[productName] = (productCounts[productName] || 0) + quantity;
+				}
+			});
+
+			// Ordenar y tomar top 5
+			const sorted = Object.entries(productCounts)
+				.sort((a, b) => b[1] - a[1])
+				.slice(0, 5);
+
+			// Si no hay datos, mostrar mensaje
+			const labels = sorted.length > 0 ? sorted.map(([product]) => product) : ['Sin ventas aún'];
+			const data = sorted.length > 0 ? sorted.map(([, count]) => count) : [0];
+
+			const ctx = document.getElementById('topProductsChart');
+			if(!ctx) return;
+
+			if(topProductsChart) topProductsChart.destroy();
+
+			topProductsChart = new Chart(ctx, {
+				type: 'bar',
+				data: {
+					labels: labels,
+					datasets: [{
+						label: 'Unidades vendidas',
+						data: data,
+						backgroundColor: [
+							'#3bb4ff',
+							'#7af0a5',
+							'#ffcc33',
+							'#ff9f43',
+							'#c7ff00'
+						],
+						borderColor: '#0f2430',
+						borderWidth: 2
+					}]
+				},
+				options: {
+					indexAxis: 'y',
+					responsive: true,
+					maintainAspectRatio: false,
+					plugins: {
+						legend: {
+							display: false
+						}
+					},
+					scales: {
+						x: {
+							beginAtZero: true,
+							ticks: {
+								color: '#9aa5b1',
+								stepSize: 1
+							},
+							grid: {
+								color: 'rgba(255, 255, 255, 0.05)'
+							}
+						},
+						y: {
+							ticks: {
+								color: '#9aa5b1'
+							},
+							grid: {
+								color: 'rgba(255, 255, 255, 0.05)'
+							}
+						}
+					}
+				}
+			});
+		}
+	</script>
+</body>
+</html>
