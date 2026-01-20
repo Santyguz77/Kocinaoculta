@@ -61,6 +61,7 @@
 		@media (max-width: 768px) {
 			.hamburger {
 				display: flex;
+				flex-direction: column;
 				align-items: center;
 				justify-content: center;
 			}
@@ -1532,25 +1533,58 @@
 			const occupiedTables = AppState.tables.filter(t => t.status === 'occupied').length;
 			const activeOrders = AppState.orders.filter(o => o.status === 'pending').length;
 			
-			// Calcular ventas basándose en órdenes completadas (igual que rentabilidad)
+			// Calcular ventas priorizando transacciones registradas (consistente con finanzas)
 			const today = Utils.getDateKey();
 			const thisMonth = Utils.getMonthKey();
-			
+		
 			let todaySales = 0;
 			let monthSales = 0;
-			
-			AppState.orders.filter(o => o.status === 'completed').forEach(order => {
-				const orderDate = Utils.getDateKeyFromISO(order.completedAt);
-				const orderMonth = Utils.getMonthKeyFromISO(order.completedAt);
-				
-				let orderTotal = 0;
-				order.items.forEach(item => {
-					orderTotal += item.price * item.quantity;
-				});
-				
-				if (orderDate === today) todaySales += orderTotal;
-				if (orderMonth === thisMonth) monthSales += orderTotal;
+		
+			const ordersById = new Map(AppState.orders.map(order => [order.id, order]));
+			const saleTransactions = AppState.transactions.filter(transaction => {
+				const txType = (transaction?.type || 'sale').toLowerCase();
+				return txType === 'sale' && transaction?.date;
 			});
+
+			if (saleTransactions.length > 0) {
+				saleTransactions.forEach(transaction => {
+					const amount = getTransactionSignedAmount(transaction);
+					if (amount <= 0) {
+						return;
+					}
+					const linkedOrder = transaction.orderId ? ordersById.get(transaction.orderId) : null;
+					if (transaction.orderId && !linkedOrder) {
+						return;
+					}
+					if (linkedOrder && linkedOrder.status !== 'completed') {
+						return;
+					}
+					const referenceDate = transaction.date || linkedOrder?.completedAt;
+					const transactionDate = Utils.getDateKeyFromISO(referenceDate);
+					const transactionMonth = Utils.getMonthKeyFromISO(referenceDate);
+					if (transactionDate === today) {
+						todaySales += amount;
+					}
+					if (transactionMonth === thisMonth) {
+						monthSales += amount;
+					}
+				});
+			} else {
+				AppState.orders.filter(o => o.status === 'completed').forEach(order => {
+					const orderDate = Utils.getDateKeyFromISO(order.completedAt);
+					const orderMonth = Utils.getMonthKeyFromISO(order.completedAt);
+					let orderTotal = 0;
+					order.items.forEach(item => {
+						orderTotal += item.price * item.quantity;
+					});
+					if (orderDate === today) {
+						todaySales += orderTotal;
+					}
+					if (orderMonth === thisMonth) {
+						monthSales += orderTotal;
+					}
+				});
+			}
 
 			document.getElementById('stat-tables').textContent = occupiedTables;
 			document.getElementById('stat-orders').textContent = activeOrders;
@@ -2717,11 +2751,28 @@
 			}
 
 			const completedOrders = AppState.orders.filter(o => o.status === 'completed');
+			const saleTransactions = AppState.transactions.filter(transaction => {
+				const txType = (transaction?.type || 'sale').toLowerCase();
+				return txType === 'sale' && transaction?.orderId;
+			});
+			const saleTransactionByOrderId = new Map();
+			saleTransactions.forEach(transaction => {
+				if (!saleTransactionByOrderId.has(transaction.orderId)) {
+					saleTransactionByOrderId.set(transaction.orderId, transaction);
+				}
+			});
+			const reportOrders = saleTransactionByOrderId.size > 0
+				? completedOrders.filter(order => saleTransactionByOrderId.has(order.id))
+				: completedOrders;
+			const resolveOrderDate = (order) => {
+				const transaction = saleTransactionByOrderId.get(order.id);
+				return transaction?.date || order.completedAt;
+			};
 
 			// Calcular ventas por producto
 			const productSales = {};
-			
-			completedOrders.forEach(order => {
+		
+			reportOrders.forEach(order => {
 				order.items.forEach(item => {
 					if (!productSales[item.menuItemId]) {
 						const menuItem = AppState.menuItems.find(m => m.id === item.menuItemId);
@@ -2750,10 +2801,14 @@
 			let salesToday = 0;
 			let salesMonth = 0;
 			let ordersMonthCount = 0;
-			
-			completedOrders.forEach(order => {
-				const orderDate = Utils.getDateKeyFromISO(order.completedAt);
-				const orderMonth = Utils.getMonthKeyFromISO(order.completedAt);
+		
+			reportOrders.forEach(order => {
+				const referenceDateISO = resolveOrderDate(order);
+				if (!referenceDateISO) {
+					return;
+				}
+				const orderDate = Utils.getDateKeyFromISO(referenceDateISO);
+				const orderMonth = Utils.getMonthKeyFromISO(referenceDateISO);
 				
 				let orderTotal = 0;
 				order.items.forEach(item => {
@@ -2814,9 +2869,9 @@
 			}
 
 			// Ticket promedio
-			const avgTicket = completedOrders.length > 0 ? salesMonth / ordersMonthCount : 0;
+			const avgTicket = ordersMonthCount > 0 ? salesMonth / ordersMonthCount : 0;
 			document.getElementById('avg-ticket').textContent = Utils.formatCurrency(avgTicket);
-			document.getElementById('total-tickets').textContent = `${completedOrders.length} órdenes totales`;
+			document.getElementById('total-tickets').textContent = `${reportOrders.length} órdenes totales`;
 
 			// === GRÁFICA: VENTAS POR DÍA (Últimos 7 días) ===
 			const last7Days = [];
@@ -2829,8 +2884,12 @@
 				salesByDay[dateKey] = 0;
 			}
 
-			completedOrders.forEach(order => {
-				const orderDate = Utils.getDateKeyFromISO(order.completedAt);
+			reportOrders.forEach(order => {
+				const referenceDateISO = resolveOrderDate(order);
+				if (!referenceDateISO) {
+					return;
+				}
+				const orderDate = Utils.getDateKeyFromISO(referenceDateISO);
 				if (salesByDay.hasOwnProperty(orderDate)) {
 					order.items.forEach(item => {
 						salesByDay[orderDate] += item.price * item.quantity;
@@ -2951,8 +3010,12 @@
 				profitByMonth[monthKey] = 0;
 			}
 
-			completedOrders.forEach(order => {
-				const orderMonth = Utils.getMonthKeyFromISO(order.completedAt);
+			reportOrders.forEach(order => {
+				const referenceDateISO = resolveOrderDate(order);
+				if (!referenceDateISO) {
+					return;
+				}
+				const orderMonth = Utils.getMonthKeyFromISO(referenceDateISO);
 				if (profitByMonth.hasOwnProperty(orderMonth)) {
 					order.items.forEach(item => {
 						const menuItem = AppState.menuItems.find(m => m.id === item.menuItemId);

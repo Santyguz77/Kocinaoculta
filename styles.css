@@ -622,15 +622,30 @@ input:focus, textarea:focus, select:focus {
 
 /* Responsive */
 @media (max-width: 768px) {
-	.sidebar {
-		width: 0;
-		padding: 0;
-		overflow: hidden;
+	.app {
+		flex-direction: column;
 	}
-	
+
+	.sidebar {
+		position: fixed;
+		left: 0;
+		top: 0;
+		height: 100vh;
+		width: 260px;
+		padding: 20px;
+		transform: translateX(-100%);
+		transition: transform 0.3s ease;
+		overflow-y: auto;
+		z-index: 1000;
+	}
+
+	.sidebar.mobile-open {
+		transform: translateX(0);
+	}
+
 	.main {
 		margin-left: 0;
-		padding: 15px;
+		padding: 80px 15px 20px 15px;
 	}
 	
 	.header h1 {
