@@ -419,6 +419,7 @@
 									<th>Tipo</th>
 									<th>Método</th>
 									<th>Monto</th>
+									<th>Factura</th>
 									<th>Acciones</th>
 								</tr>
 							</thead>
@@ -750,6 +751,34 @@
 						<button class="btn" onclick="saveOrderFromModal()" style="width: 100%;"><span class="icon-dot icon-dot--success"></span><span>Guardar Pedido</span></button>
 						<button class="btn btn-secondary" onclick="closeOrderModal()" style="width: 100%;">Cancelar</button>
 					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Modal Método de Pago -->
+	<div id="payment-method-modal" class="modal" style="display: none;">
+		<div class="panel" style="max-width: 500px;">
+			<div class="modal-header">
+				<h3>Método de Pago</h3>
+				<button class="modal-close" onclick="closePaymentMethodModal()" aria-label="Cerrar">X</button>
+			</div>
+			<div style="padding: 20px;">
+				<p style="color: var(--muted); margin-bottom: 15px;">Selecciona el método de pago para esta orden:</p>
+				<div id="payment-method-info" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-bottom: 20px;"></div>
+				
+				<label for="payment-method-select" style="display: block; margin-bottom: 8px; color: var(--accent); font-weight: 600;">Método de Pago</label>
+				<select id="payment-method-select" style="width: 100%; padding: 12px; background: var(--panel); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; font-size: 14px; margin-bottom: 20px;">
+					<option value="Efectivo">💵 Efectivo</option>
+					<option value="Tarjeta">💳 Tarjeta</option>
+					<option value="Transferencia">🏦 Transferencia</option>
+					<option value="Mixto">🔄 Mixto</option>
+					<option value="Cortesía">🎁 Cortesía</option>
+				</select>
+				
+				<div style="display: flex; gap: 10px;">
+					<button class="btn btn-success" onclick="confirmPaymentMethod()" style="flex: 1;"><span class="icon-dot icon-dot--success"></span><span>Confirmar</span></button>
+					<button class="btn btn-secondary" onclick="closePaymentMethodModal()" style="flex: 1;">Cancelar</button>
 				</div>
 			</div>
 		</div>
@@ -1350,7 +1379,7 @@
 			const tbody = document.querySelector('#transactions-table tbody');
 			if (!tbody) return;
 			if (!transactions || transactions.length === 0) {
-				tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="color: var(--muted); padding: 40px;">No hay transacciones para el rango seleccionado</td></tr>';
+				tbody.innerHTML = '<tr><td colspan="8" class="text-center" style="color: var(--muted); padding: 40px;">No hay transacciones para el rango seleccionado</td></tr>';
 				return;
 			}
 			tbody.innerHTML = transactions.map(transaction => {
@@ -1360,6 +1389,13 @@
 				const methodLabel = transaction.paymentMethod && String(transaction.paymentMethod).trim()
 					? String(transaction.paymentMethod).trim()
 					: 'Sin método';
+				
+				// Verificar si la transacción tiene una orden asociada
+				const hasInvoice = transaction.orderId && AppState.orders.find(o => o.id === transaction.orderId);
+				const invoiceButton = hasInvoice 
+					? `<button class="btn btn-small" onclick="viewTransactionInvoice('${transaction.id}')" style="background: #4caf50;"><span class="icon-dot icon-dot--success"></span><span>Ver Factura</span></button>`
+					: `<span style="color: var(--muted); font-size: 12px;">Sin factura</span>`;
+				
 				return `
 					<tr>
 						<td>${Utils.formatDate(transaction.date)}</td>
@@ -1368,6 +1404,7 @@
 						<td>${formatTransactionType(transaction.type)}</td>
 						<td>${methodLabel}</td>
 						<td style="font-weight: 600; ${amountStyle}">${Utils.formatCurrency(amount)}</td>
+						<td>${invoiceButton}</td>
 						<td>
 							<button class="btn btn-small btn-danger" onclick="deleteTransaction('${transaction.id}')"><span class="icon-dot icon-dot--danger"></span><span>Eliminar</span></button>
 						</td>
@@ -1765,21 +1802,65 @@
 		}
 
 		let isCompletingOrder = false;
+		let pendingOrderToComplete = null;
 
 		async function completeOrder(orderId) {
-		if (isCompletingOrder) {
-			return;
-		}			const order = AppState.orders.find(o => o.id === orderId);
+			if (isCompletingOrder) {
+				return;
+			}
+			
+			const order = AppState.orders.find(o => o.id === orderId);
 			if (!order) {
 				Utils.showNotification('Pedido no encontrado', 'error');
 				return;
 			}
 
-			// Confirmar con el usuario
-			if (!confirm(`¿Completar pedido de Mesa ${order.tableNumber}?\nTotal: ${Utils.formatCurrency(order.total)}`)) {
+			// Verificar si la orden ya está completada
+			if (order.status === 'completed') {
+				alert('⚠️ Este pedido ya fue completado anteriormente.\n\nSi no lo ves en la lista, actualiza la página.');
 				return;
 			}
 
+			// Verificar si ya existe una transacción para esta orden (protección contra duplicados)
+			const existingTransaction = AppState.transactions.find(t => t.orderId === orderId);
+			if (existingTransaction) {
+				alert('⚠️ Ya existe una transacción para este pedido.\n\nVerifica en la sección de Finanzas.');
+				return;
+			}
+
+			// Mostrar modal de método de pago
+			pendingOrderToComplete = order;
+			const modal = document.getElementById('payment-method-modal');
+			const infoDiv = document.getElementById('payment-method-info');
+			infoDiv.innerHTML = `
+				<p style="margin: 0; color: var(--muted);">Mesa: <strong style="color: #fff;">${order.tableNumber}</strong></p>
+				<p style="margin: 5px 0 0 0; color: var(--muted);">Total: <strong style="color: var(--success); font-size: 18px;">${Utils.formatCurrency(order.total)}</strong></p>
+			`;
+			modal.style.display = 'flex';
+		}
+
+		function closePaymentMethodModal() {
+			document.getElementById('payment-method-modal').style.display = 'none';
+			pendingOrderToComplete = null;
+			isCompletingOrder = false;
+		}
+
+		async function confirmPaymentMethod() {
+			if (!pendingOrderToComplete) return;
+			
+			const paymentMethod = document.getElementById('payment-method-select').value;
+			const order = pendingOrderToComplete;
+			
+			// Verificar una vez más que la orden no esté completada
+			if (order.status === 'completed') {
+				closePaymentMethodModal();
+				alert('⚠️ Este pedido ya fue completado.');
+				return;
+			}
+			
+			// Cerrar modal
+			closePaymentMethodModal();
+			
 			isCompletingOrder = true;
 
 			try {
@@ -1788,17 +1869,19 @@
 					clearInterval(autoRefreshInterval);
 				}
 
-				// 1. Actualizar orden
+				// 1. Actualizar orden INMEDIATAMENTE en estado local para evitar doble click
 				order.status = 'completed';
 				order.completedAt = new Date().toISOString();
+				order.paymentMethod = paymentMethod;
 
-				// 2. Crear transacción
+				// 2. Crear transacción con método de pago
 				const transaction = {
 					id: Utils.generateId(),
 					orderId: order.id,
 					tableNumber: order.tableNumber,
 					amount: order.total,
 					type: 'sale',
+					paymentMethod: paymentMethod,
 					date: new Date().toISOString(),
 					concept: `Mesa ${order.tableNumber} - ${order.items.length} productos`
 				};
@@ -1815,20 +1898,25 @@
 					}
 				}
 
-				// 4. GUARDAR TODO EN SERVIDOR (ESPERAR CONFIRMACIÓN)
+				// 4. Actualizar UI INMEDIATAMENTE antes de guardar
+				renderOrders();
+				renderDashboard();
+				renderTables();
+
+				// 5. GUARDAR TODO EN SERVIDOR (ESPERAR CONFIRMACIÓN)
 				await Promise.all([
 					API.save('orders', AppState.orders),
 					API.save('transactions', AppState.transactions),
 					API.save('tables', AppState.tables)
 				]);
 
-				// 5. Generar PDF después de confirmar guardado
+				// 6. Generar PDF después de confirmar guardado
 				await generateInvoicePDF(order);
 
-				// 6. RECARGAR DATOS DESDE SERVIDOR para garantizar sincronización
+				// 7. RECARGAR DATOS DESDE SERVIDOR para garantizar sincronización
 				await loadInitialData();
 
-				// 7. Actualizar UI con datos frescos del servidor
+				// 8. Actualizar UI con datos frescos del servidor
 				renderOrders();
 				renderDashboard();
 				renderTables();
@@ -1838,17 +1926,26 @@
 			} catch (error) {
 				console.error('Error completando orden:', error);
 				
-				// Intentar recargar datos desde servidor (sin fallar si no hay conexión)
+				// Si falla, revertir el estado de la orden
+				order.status = 'pending';
+				delete order.completedAt;
+				delete order.paymentMethod;
+				
+				// Remover la transacción que se agregó
+				AppState.transactions = AppState.transactions.filter(t => t.orderId !== order.id);
+				
+				// Intentar recargar datos desde servidor para restaurar estado correcto
 				try {
 					await loadInitialData();
-					renderOrders();
-					renderDashboard();
-					renderTables();
-					renderFinance();
-					renderFinance();
 				} catch (loadError) {
 					console.error('No se pudo recargar datos:', loadError);
 				}
+				
+				// Actualizar UI
+				renderOrders();
+				renderDashboard();
+				renderTables();
+				renderFinance();
 				
 				// Una sola alerta clara
 				alert('❌ ERROR AL COMPLETAR PEDIDO\n\nNo se pudo guardar en el servidor.\n\nPosibles causas:\n- Sin conexión a internet\n- Servidor fuera de línea\n\nPor favor verifica tu conexión e intenta nuevamente.');
@@ -2136,6 +2233,65 @@
 			renderFinance();
 			renderDashboard();
 			Utils.showNotification('Transacción eliminada', 'success');
+		}
+
+		async function viewTransactionInvoice(transactionId) {
+			const transaction = AppState.transactions.find(t => t.id === transactionId);
+			if (!transaction || !transaction.orderId) {
+				alert('Esta transacción no tiene una factura asociada.');
+				return;
+			}
+			
+			const order = AppState.orders.find(o => o.id === transaction.orderId);
+			if (!order) {
+				alert('No se encontró la orden asociada a esta transacción.');
+				return;
+			}
+			
+			// Mostrar modal con detalles de la orden y generar PDF
+			const modal = document.createElement('div');
+			modal.className = 'modal';
+			modal.style.display = 'flex';
+			modal.innerHTML = `
+				<div class="panel" style="max-width: 600px;">
+					<div class="modal-header">
+						<h3>Factura - Mesa ${order.tableNumber}</h3>
+						<button class="modal-close" onclick="this.closest('.modal').remove()" aria-label="Cerrar">X</button>
+					</div>
+					<div style="padding: 20px;">
+						<div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+							<p style="color: var(--muted); margin-bottom: 5px;">Fecha: ${Utils.formatDate(order.createdAt)}</p>
+							<p style="color: var(--muted); margin-bottom: 5px;">Mesa: ${order.tableNumber}</p>
+							<p style="color: var(--muted); margin-bottom: 10px;">Estado: ${order.status === 'completed' ? 'Completado' : order.status}</p>
+						</div>
+						
+						<h4 style="color: var(--accent); margin-bottom: 10px;">Productos:</h4>
+						<div style="max-height: 300px; overflow-y: auto;">
+							${order.items.map(item => `
+								<div style="display: flex; justify-content: space-between; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 6px; margin-bottom: 8px;">
+									<div>
+										<strong>${item.name}</strong>
+										<br><small style="color: var(--muted);">Cantidad: ${item.quantity} x ${Utils.formatCurrency(item.price)}</small>
+										${item.notes ? `<br><small style="color: var(--muted); font-style: italic;">Nota: ${item.notes}</small>` : ''}
+									</div>
+									<div style="font-weight: 600; color: var(--success);">${Utils.formatCurrency(item.price * item.quantity)}</div>
+								</div>
+							`).join('')}
+						</div>
+						
+						<div style="background: linear-gradient(135deg, #4caf50, #45a049); padding: 15px; border-radius: 8px; margin-top: 15px; text-align: center;">
+							<div style="font-size: 14px; color: #fff; margin-bottom: 5px;">TOTAL</div>
+							<div style="font-size: 32px; font-weight: 700; color: #fff;">${Utils.formatCurrency(order.total)}</div>
+						</div>
+						
+						<div style="margin-top: 20px; display: flex; gap: 10px;">
+							<button class="btn" onclick="generateInvoicePDF(AppState.orders.find(o => o.id === '${order.id}'))" style="flex: 1;"><span class="icon-dot icon-dot--info"></span><span>Descargar PDF</span></button>
+							<button class="btn btn-secondary" onclick="this.closest('.modal').remove()" style="flex: 1;">Cerrar</button>
+						</div>
+					</div>
+				</div>
+			`;
+			document.body.appendChild(modal);
 		}
 
 		// VER DETALLE DE MESA
