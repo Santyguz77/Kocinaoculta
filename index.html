@@ -1570,58 +1570,31 @@
 			const occupiedTables = AppState.tables.filter(t => t.status === 'occupied').length;
 			const activeOrders = AppState.orders.filter(o => o.status === 'pending').length;
 			
-			// Calcular ventas priorizando transacciones registradas (consistente con finanzas)
+			// Calcular ventas usando la misma lógica que Finanzas (transacciones son la fuente de verdad)
 			const today = Utils.getDateKey();
 			const thisMonth = Utils.getMonthKey();
 		
 			let todaySales = 0;
 			let monthSales = 0;
 		
-			const ordersById = new Map(AppState.orders.map(order => [order.id, order]));
-			const saleTransactions = AppState.transactions.filter(transaction => {
-				const txType = (transaction?.type || 'sale').toLowerCase();
-				return txType === 'sale' && transaction?.date;
+			// Usar transacciones como fuente principal (consistente con sección Finanzas)
+			AppState.transactions.forEach(transaction => {
+				if (!transaction?.date) return;
+				
+				const amount = getTransactionSignedAmount(transaction);
+				// Solo contar ingresos positivos (ventas, ingresos)
+				if (amount <= 0) return;
+				
+				const transactionDate = Utils.getDateKeyFromISO(transaction.date);
+				const transactionMonth = Utils.getMonthKeyFromISO(transaction.date);
+				
+				if (transactionDate === today) {
+					todaySales += amount;
+				}
+				if (transactionMonth === thisMonth) {
+					monthSales += amount;
+				}
 			});
-
-			if (saleTransactions.length > 0) {
-				saleTransactions.forEach(transaction => {
-					const amount = getTransactionSignedAmount(transaction);
-					if (amount <= 0) {
-						return;
-					}
-					const linkedOrder = transaction.orderId ? ordersById.get(transaction.orderId) : null;
-					if (transaction.orderId && !linkedOrder) {
-						return;
-					}
-					if (linkedOrder && linkedOrder.status !== 'completed') {
-						return;
-					}
-					const referenceDate = transaction.date || linkedOrder?.completedAt;
-					const transactionDate = Utils.getDateKeyFromISO(referenceDate);
-					const transactionMonth = Utils.getMonthKeyFromISO(referenceDate);
-					if (transactionDate === today) {
-						todaySales += amount;
-					}
-					if (transactionMonth === thisMonth) {
-						monthSales += amount;
-					}
-				});
-			} else {
-				AppState.orders.filter(o => o.status === 'completed').forEach(order => {
-					const orderDate = Utils.getDateKeyFromISO(order.completedAt);
-					const orderMonth = Utils.getMonthKeyFromISO(order.completedAt);
-					let orderTotal = 0;
-					order.items.forEach(item => {
-						orderTotal += item.price * item.quantity;
-					});
-					if (orderDate === today) {
-						todaySales += orderTotal;
-					}
-					if (orderMonth === thisMonth) {
-						monthSales += orderTotal;
-					}
-				});
-			}
 
 			document.getElementById('stat-tables').textContent = occupiedTables;
 			document.getElementById('stat-orders').textContent = activeOrders;
@@ -2906,20 +2879,28 @@
 				warningDiv.style.display = 'none';
 			}
 
+			// Usar transacciones como fuente de verdad (consistente con Finanzas y Dashboard)
 			const completedOrders = AppState.orders.filter(o => o.status === 'completed');
+			const ordersById = new Map(completedOrders.map(order => [order.id, order]));
+			
+			// Obtener todas las transacciones de venta con monto positivo
 			const saleTransactions = AppState.transactions.filter(transaction => {
-				const txType = (transaction?.type || 'sale').toLowerCase();
-				return txType === 'sale' && transaction?.orderId;
+				if (!transaction?.date) return false;
+				const amount = getTransactionSignedAmount(transaction);
+				return amount > 0; // Solo ingresos positivos
 			});
+			
+			// Mapear transacciones por orderId para obtener detalles de productos
 			const saleTransactionByOrderId = new Map();
 			saleTransactions.forEach(transaction => {
-				if (!saleTransactionByOrderId.has(transaction.orderId)) {
+				if (transaction.orderId && !saleTransactionByOrderId.has(transaction.orderId)) {
 					saleTransactionByOrderId.set(transaction.orderId, transaction);
 				}
 			});
-			const reportOrders = saleTransactionByOrderId.size > 0
-				? completedOrders.filter(order => saleTransactionByOrderId.has(order.id))
-				: completedOrders;
+			
+			// Para reportes de productos, usar órdenes que tengan transacción asociada
+			const reportOrders = completedOrders.filter(order => saleTransactionByOrderId.has(order.id));
+			
 			const resolveOrderDate = (order) => {
 				const transaction = saleTransactionByOrderId.get(order.id);
 				return transaction?.date || order.completedAt;
@@ -2957,7 +2938,27 @@
 			let salesToday = 0;
 			let salesMonth = 0;
 			let ordersMonthCount = 0;
+			
+			// Calcular ventas totales desde transacciones (consistente con Finanzas)
+			let totalSalesTodayFromTransactions = 0;
+			let totalSalesMonthFromTransactions = 0;
+			
+			saleTransactions.forEach(transaction => {
+				const amount = getTransactionSignedAmount(transaction);
+				if (amount <= 0) return;
+				
+				const transactionDate = Utils.getDateKeyFromISO(transaction.date);
+				const transactionMonth = Utils.getMonthKeyFromISO(transaction.date);
+				
+				if (transactionDate === today) {
+					totalSalesTodayFromTransactions += amount;
+				}
+				if (transactionMonth === thisMonth) {
+					totalSalesMonthFromTransactions += amount;
+				}
+			});
 		
+			// Calcular ganancias desde órdenes (necesitamos detalles de productos para costos)
 			reportOrders.forEach(order => {
 				const referenceDateISO = resolveOrderDate(order);
 				if (!referenceDateISO) {
@@ -2967,6 +2968,7 @@
 				const orderMonth = Utils.getMonthKeyFromISO(referenceDateISO);
 				
 				let orderTotal = 0;
+				let orderProfit = 0;
 				order.items.forEach(item => {
 					const menuItem = AppState.menuItems.find(m => m.id === item.menuItemId);
 					const cost = menuItem?.cost || 0;
@@ -2974,24 +2976,30 @@
 					const sale = item.price * item.quantity;
 					
 					orderTotal += sale;
-					
-					if (orderDate === today) {
-						profitToday += profit;
-						salesToday += sale;
-					}
-					if (orderMonth === thisMonth) {
-						profitMonth += profit;
-						salesMonth += sale;
-					}
+					orderProfit += profit;
 				});
 				
-				if (orderMonth === thisMonth) ordersMonthCount++;
+				if (orderDate === today) {
+					profitToday += orderProfit;
+					salesToday += orderTotal;
+				}
+				if (orderMonth === thisMonth) {
+					profitMonth += orderProfit;
+					salesMonth += orderTotal;
+					ordersMonthCount++;
+				}
 			});
 
 			// Actualizar métricas principales
 			document.getElementById('profit-today').textContent = Utils.formatCurrency(profitToday);
 			document.getElementById('profit-month').textContent = Utils.formatCurrency(profitMonth);
 			document.getElementById('orders-month-count').textContent = `${ordersMonthCount} órdenes`;
+			
+			// Mostrar ventas totales del día (de transacciones, consistente con Finanzas)
+			const profitTodayChangeEl = document.getElementById('profit-today-change');
+			if (profitTodayChangeEl) {
+				profitTodayChangeEl.textContent = `Ventas: ${Utils.formatCurrency(totalSalesTodayFromTransactions)}`;
+			}
 			
 			const products = Object.values(productSales);
 			
@@ -3034,7 +3042,7 @@
 			const salesByDay = {};
 			for (let i = 6; i >= 0; i--) {
 				const date = new Date();
-				date.setUTCDate(date.getUTCDate() - i);
+				date.setDate(date.getDate() - i);
 				const dateKey = Utils.getDateKey(date);
 				last7Days.push(dateKey);
 				salesByDay[dateKey] = 0;
@@ -3159,8 +3167,8 @@
 			const profitByMonth = {};
 			for (let i = 5; i >= 0; i--) {
 				const date = new Date();
-				date.setUTCDate(1);
-				date.setUTCMonth(date.getUTCMonth() - i);
+				date.setDate(1);
+				date.setMonth(date.getMonth() - i);
 				const monthKey = Utils.getMonthKey(date);
 				last6Months.push(monthKey);
 				profitByMonth[monthKey] = 0;
