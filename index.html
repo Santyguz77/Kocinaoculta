@@ -461,9 +461,9 @@
 								transacciones</small>
 						</div>
 						<div class="stat-card">
-							<h3>Gastos</h3>
-							<div class="value" id="finance-total-expense">$0</div>
-							<small style="color: var(--muted); font-size: 13px;">Incluye egresos y devoluciones</small>
+							<h3>Rentabilidad</h3>
+							<div class="value" id="finance-total-profit-summary">$0</div>
+							<small style="color: var(--muted); font-size: 13px;">Ganancia Neta (Ventas - Costos)</small>
 						</div>
 						<div class="stat-card">
 							<h3>Balance Neto</h3>
@@ -1483,10 +1483,38 @@
 
 		function renderFinanceSummary(transactions) {
 			const totals = calculateFinanceTotals(transactions);
+
+			// Calcular rentabilidad para las transacciones filtradas
+			let totalProfit = 0;
+			transactions.forEach(transaction => {
+				const amount = getTransactionSignedAmount(transaction);
+				// Solo considerar ventas positivas
+				if (transaction.type === 'sale' && amount > 0 && transaction.orderId) {
+					const order = AppState.orders.find(o => o.id === transaction.orderId);
+					if (order) {
+						let orderCost = 0;
+						order.items.forEach(item => {
+							const menuItem = AppState.menuItems.find(m => m.id === item.menuItemId);
+							const cost = menuItem?.cost || 0;
+							orderCost += cost * item.quantity;
+						});
+						// Profit = Venta - Costo
+						// Usamos el monto de la transacción para ser fieles a lo cobrado
+						totalProfit += (amount - orderCost);
+					}
+				}
+			});
+
 			const incomeEl = document.getElementById('finance-total-income');
 			if (incomeEl) incomeEl.textContent = Utils.formatCurrency(totals.income);
-			const expenseEl = document.getElementById('finance-total-expense');
-			if (expenseEl) expenseEl.textContent = Utils.formatCurrency(totals.expense * -1);
+
+			// Elemento de Rentabilidad (reemplaza a Gastos)
+			const profitEl = document.getElementById('finance-total-profit-summary');
+			if (profitEl) {
+				profitEl.textContent = Utils.formatCurrency(totalProfit);
+				profitEl.style.color = totalProfit >= 0 ? 'var(--success)' : '#ff5252';
+			}
+
 			const netEl = document.getElementById('finance-total-net');
 			if (netEl) netEl.textContent = Utils.formatCurrency(totals.net);
 			const countEl = document.getElementById('finance-total-count');
@@ -1523,6 +1551,22 @@
 
 		function renderTransactionsTable(transactions) {
 			const tbody = document.querySelector('#transactions-table tbody');
+			const thead = document.querySelector('#transactions-table thead tr');
+
+			if (thead) {
+				// Actualizar encabezados si es necesario (asegurar que coincidan con las columnas)
+				thead.innerHTML = `
+					<th>Fecha</th>
+					<th>Mesa</th>
+					<th>Concepto</th>
+					<th>Tipo</th>
+					<th>Método</th>
+					<th>Monto</th>
+					<th>Rentabilidad</th>
+					<th>Acciones</th>
+				`;
+			}
+
 			if (!tbody) return;
 			if (!transactions || transactions.length === 0) {
 				tbody.innerHTML = '<tr><td colspan="8" class="text-center" style="color: var(--muted); padding: 40px;">No hay transacciones para el rango seleccionado</td></tr>';
@@ -1536,11 +1580,30 @@
 					? String(transaction.paymentMethod).trim()
 					: 'Sin método';
 
-				// Verificar si la transacción tiene una orden asociada
-				const hasInvoice = transaction.orderId && AppState.orders.find(o => o.id === transaction.orderId);
-				const invoiceButton = hasInvoice
-					? `<button class="btn btn-small" onclick="viewTransactionInvoice('${transaction.id}')" style="background: #4caf50;"><span class="icon-dot icon-dot--success"></span><span>Ver Factura</span></button>`
-					: `<span style="color: var(--muted); font-size: 12px;">Sin factura</span>`;
+				// Calcular rentabilidad
+				let profitButton = '<span style="color: var(--muted);">-</span>';
+				let profitAmount = 0;
+
+				// Verificar si la transacción tiene una orden asociada para calcular costo
+				const order = transaction.orderId ? AppState.orders.find(o => o.id === transaction.orderId) : null;
+
+				if (order && amount > 0 && transaction.type === 'sale') {
+					let totalCost = 0;
+					order.items.forEach(item => {
+						const menuItem = AppState.menuItems.find(m => m.id === item.menuItemId);
+						const cost = menuItem?.cost || 0;
+						totalCost += cost * item.quantity;
+					});
+
+					profitAmount = amount - totalCost;
+					const profitClass = profitAmount >= 0 ? 'success' : 'danger';
+					const profitIcon = profitAmount >= 0 ? 'icon-dot--success' : 'icon-dot--danger';
+
+					profitButton = `<button class="btn btn-small" onclick="viewTransactionProfitability('${transaction.id}')" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1); min-width: 100px;">
+						<span class="icon-dot ${profitIcon}"></span>
+						<span style="color: ${profitAmount >= 0 ? 'var(--success)' : '#ff5252'}; font-weight: 700;">${Utils.formatCurrency(profitAmount)}</span>
+					</button>`;
+				}
 
 				return `
 					<tr>
@@ -1550,13 +1613,130 @@
 						<td>${formatTransactionType(transaction.type)}</td>
 						<td>${methodLabel}</td>
 						<td style="font-weight: 600; ${amountStyle}">${Utils.formatCurrency(amount)}</td>
-						<td>${invoiceButton}</td>
+						<td>${profitButton}</td>
 						<td>
 							<button class="btn btn-small btn-danger" onclick="deleteTransaction('${transaction.id}')"><span class="icon-dot icon-dot--danger"></span><span>Eliminar</span></button>
 						</td>
 					</tr>
 				`;
 			}).join('');
+		}
+
+		async function viewTransactionProfitability(transactionId) {
+			const transaction = AppState.transactions.find(t => t.id === transactionId);
+			if (!transaction || !transaction.orderId) {
+				alert('Esta transacción no tiene detalles de productos asociados.');
+				return;
+			}
+
+			const order = AppState.orders.find(o => o.id === transaction.orderId);
+			if (!order) {
+				alert('No se encontró la orden asociada a esta transacción.');
+				return;
+			}
+
+			// Calcular totales
+			let totalCost = 0;
+			let totalSale = getTransactionSignedAmount(transaction); // Usar el monto real de la transacción
+
+			const itemsWithProfit = order.items.map(item => {
+				const menuItem = AppState.menuItems.find(m => m.id === item.menuItemId);
+				const unitCost = menuItem?.cost || 0;
+				const totalItemCost = unitCost * item.quantity;
+				const totalItemSale = item.price * item.quantity;
+				const itemProfit = totalItemSale - totalItemCost;
+				const itemMargin = totalItemSale > 0 ? ((itemProfit / totalItemSale) * 100).toFixed(1) : 0;
+
+				totalCost += totalItemCost;
+
+				return {
+					...item,
+					unitCost,
+					totalItemCost,
+					totalItemSale,
+					itemProfit,
+					itemMargin
+				};
+			});
+
+			const totalProfit = totalSale - totalCost;
+			const totalMargin = totalSale > 0 ? ((totalProfit / totalSale) * 100).toFixed(1) : 0;
+
+			// Mostrar modal detallado
+			const modal = document.createElement('div');
+			modal.className = 'modal';
+			modal.style.display = 'flex';
+			modal.innerHTML = `
+				<div class="panel" style="max-width: 800px; width: 95%;">
+					<div class="modal-header">
+						<h3>Rentabilidad - Mesa ${order.tableNumber}</h3>
+						<button class="modal-close" onclick="this.closest('.modal').remove()" aria-label="Cerrar">X</button>
+					</div>
+					<div style="padding: 20px;">
+						<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+							<div class="stat-card" style="padding: 15px;">
+								<h3 style="font-size: 12px;">Venta Total</h3>
+								<div class="value" style="font-size: 24px; color: #fff;">${Utils.formatCurrency(totalSale)}</div>
+							</div>
+							<div class="stat-card" style="padding: 15px;">
+								<h3 style="font-size: 12px;">Costo Total</h3>
+								<div class="value" style="font-size: 24px; color: #ff9800;">${Utils.formatCurrency(totalCost)}</div>
+							</div>
+							<div class="stat-card" style="padding: 15px;">
+								<h3 style="font-size: 12px;">Ganancia Neta</h3>
+								<div class="value" style="font-size: 24px; color: var(--success);">${Utils.formatCurrency(totalProfit)}</div>
+							</div>
+							<div class="stat-card" style="padding: 15px;">
+								<h3 style="font-size: 12px;">Margen</h3>
+								<div class="value" style="font-size: 24px; color: var(--accent);">${totalMargin}%</div>
+							</div>
+						</div>
+						
+						<h4 style="color: var(--accent); margin-bottom: 10px;">Desglose por Producto</h4>
+						<div class="table-scroll" style="max-height: 300px; margin-bottom: 20px;">
+							<table style="width: 100%; border-collapse: collapse;">
+								<thead style="background: rgba(255,255,255,0.05);">
+									<tr>
+										<th style="padding: 10px; text-align: left;">Producto</th>
+										<th style="padding: 10px; text-align: right;">Cant.</th>
+										<th style="padding: 10px; text-align: right;">Venta</th>
+										<th style="padding: 10px; text-align: right;">Costo</th>
+										<th style="padding: 10px; text-align: right;">Ganancia</th>
+										<th style="padding: 10px; text-align: right;">%</th>
+									</tr>
+								</thead>
+								<tbody>
+									${itemsWithProfit.map(item => `
+										<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+											<td style="padding: 10px;">${item.name}</td>
+											<td style="padding: 10px; text-align: right;">${item.quantity}</td>
+											<td style="padding: 10px; text-align: right;">${Utils.formatCurrency(item.totalItemSale)}</td>
+											<td style="padding: 10px; text-align: right; color: #ff9800;">${Utils.formatCurrency(item.totalItemCost)}</td>
+											<td style="padding: 10px; text-align: right; color: var(--success); font-weight: 600;">${Utils.formatCurrency(item.itemProfit)}</td>
+											<td style="padding: 10px; text-align: right;">${item.itemMargin}%</td>
+										</tr>
+									`).join('')}
+								</tbody>
+							</table>
+						</div>
+						
+						<div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+							<div style="font-size: 12px; color: var(--muted); margin-bottom: 5px;">Detalles de la Transacción</div>
+							<div style="display: flex; gap: 20px; flex-wrap: wrap;">
+								<div><span style="color: var(--muted);">Fecha:</span> ${Utils.formatDate(transaction.date)}</div>
+								<div><span style="color: var(--muted);">Método:</span> ${transaction.paymentMethod || 'N/A'}</div>
+								<div><span style="color: var(--muted);">ID:</span> <span style="font-family: monospace; font-size: 12px;">${transaction.id.substr(0, 8)}...</span></div>
+							</div>
+						</div>
+						
+						<div style="display: flex; gap: 10px;">
+							<button class="btn" onclick="generateInvoicePDF(AppState.orders.find(o => o.id === '${order.id}'))" style="flex: 1;"><span class="icon-dot icon-dot--info"></span><span>Descargar Factura PDF</span></button>
+							<button class="btn btn-secondary" onclick="this.closest('.modal').remove()" style="flex: 1;">Cerrar</button>
+						</div>
+					</div>
+				</div>
+			`;
+			document.body.appendChild(modal);
 		}
 
 		function renderFinance() {
