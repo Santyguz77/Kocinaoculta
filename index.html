@@ -3278,6 +3278,8 @@
 			let totalSalesTodayFromTransactions = 0;
 			let totalSalesMonthFromTransactions = 0;
 
+			// Calcular rentabilidad usando la misma lógica que renderFinanceSummary() en Finanzas
+			// Iteramos directamente sobre las transacciones de venta (no sobre reportOrders)
 			saleTransactions.forEach(transaction => {
 				const amount = getTransactionSignedAmount(transaction);
 				if (amount <= 0) return;
@@ -3285,50 +3287,39 @@
 				const transactionDate = Utils.getDateKeyFromISO(transaction.date);
 				const transactionMonth = Utils.getMonthKeyFromISO(transaction.date);
 
+				// Acumular ventas totales
 				if (transactionDate === today) {
 					totalSalesTodayFromTransactions += amount;
 				}
 				if (transactionMonth === thisMonth) {
 					totalSalesMonthFromTransactions += amount;
 				}
-			});
 
-			// Calcular ganancias desde transacciones + costos de órdenes
-			// Esto asegura que las ventas sean fieles a Finanzas
-			reportOrders.forEach(order => {
-				const transaction = saleTransactionByOrderId.get(order.id);
-				if (!transaction) return;
+				// Calcular rentabilidad para transacciones de tipo 'sale' con orden asociada
+				// (misma lógica que renderFinanceSummary en Finanzas)
+				if (transaction.type === 'sale' && amount > 0 && transaction.orderId) {
+					const order = AppState.orders.find(o => o.id === transaction.orderId);
+					if (order) {
+						let orderCost = 0;
+						order.items.forEach(item => {
+							const menuItem = AppState.menuItems.find(m => m.id === item.menuItemId);
+							const cost = menuItem?.cost || 0;
+							orderCost += cost * item.quantity;
+						});
 
-				const referenceDateISO = transaction.date;
-				if (!referenceDateISO) {
-					return;
-				}
-				const orderDate = Utils.getDateKeyFromISO(referenceDateISO);
-				const orderMonth = Utils.getMonthKeyFromISO(referenceDateISO);
+						// Ganancia = monto de la transacción - costo de productos
+						const orderProfit = amount - orderCost;
 
-				// Usar el monto de la transacción como venta real (fiel a Finanzas)
-				const transactionAmount = getTransactionSignedAmount(transaction);
-				if (transactionAmount <= 0) return;
-
-				// Calcular el costo total de los productos de la orden
-				let orderCost = 0;
-				order.items.forEach(item => {
-					const menuItem = AppState.menuItems.find(m => m.id === item.menuItemId);
-					const cost = menuItem?.cost || 0;
-					orderCost += cost * item.quantity;
-				});
-
-				// Ganancia = monto de la transacción - costo de productos
-				const orderProfit = transactionAmount - orderCost;
-
-				if (orderDate === today) {
-					profitToday += orderProfit;
-					salesToday += transactionAmount;
-				}
-				if (orderMonth === thisMonth) {
-					profitMonth += orderProfit;
-					salesMonth += transactionAmount;
-					ordersMonthCount++;
+						if (transactionDate === today) {
+							profitToday += orderProfit;
+							salesToday += amount;
+						}
+						if (transactionMonth === thisMonth) {
+							profitMonth += orderProfit;
+							salesMonth += amount;
+							ordersMonthCount++;
+						}
+					}
 				}
 			});
 
