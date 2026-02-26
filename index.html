@@ -709,9 +709,22 @@
 							<li><span class="list-check-indicator is-negative"></span><span>Los meseros se
 									mantendrán</span></li>
 						</ul>
-						<button class="btn" style="background: #ff4444; border: none;" onclick="resetSalesData()">
+						<button class="btn" style="background: #ff4444; border: none; margin-bottom: 15px;"
+							onclick="resetSalesData()">
 							<span class="icon-dot icon-dot--danger"></span><span>Limpiar Todos los Datos de
 								Ventas</span>
+						</button>
+
+						<h4 class="heading-with-icon" style="color: var(--warning); margin: 20px 0 10px 0;"><span
+								class="icon-dot icon-dot--warning"></span><span>Mantenimiento de Pedidos</span></h4>
+						<p style="color: var(--muted); margin-bottom: 15px; font-size: 14px;">
+							Marca todos los pedidos pendientes actuales como "Completados". Útil para limpiar la lista
+							si el bug anterior dejó pedidos pegados.
+							<strong>No crea duplicados en finanzas.</strong>
+						</p>
+						<button class="btn btn-warning" onclick="cleanupPendingOrders()">
+							<span class="icon-dot icon-dot--warning"></span><span>Marcar Todos como Completados (Limpiar
+								Interfaz)</span>
 						</button>
 					</div>
 				</div>
@@ -2017,21 +2030,18 @@
 			}
 
 			if (currentEditingTable) {
-				currentEditingTable.number = number;
-				currentEditingTable.capacity = capacity;
-				const index = AppState.tables.findIndex(t => t.id === currentEditingTable.id);
-				AppState.tables[index] = currentEditingTable;
+				await API.update('tables', currentEditingTable.id, currentEditingTable);
 			} else {
-				AppState.tables.push({
+				const newTable = {
 					id: Utils.generateId(),
 					number,
 					capacity,
 					status: 'available',
 					currentOrder: null
-				});
+				};
+				AppState.tables.push(newTable);
+				await API.update('tables', newTable.id, newTable);
 			}
-
-			await API.save('tables', AppState.tables);
 			closeTableModal();
 			renderTables();
 			renderDashboard();
@@ -2040,11 +2050,15 @@
 
 		async function deleteTable(tableId) {
 			if (!confirm('¿Eliminar esta mesa?')) return;
-			AppState.tables = AppState.tables.filter(t => t.id !== tableId);
-			await API.save('tables', AppState.tables);
-			renderTables();
-			renderDashboard();
-			Utils.showNotification('Mesa eliminada', 'success');
+			try {
+				await API.delete('tables', tableId);
+				AppState.tables = AppState.tables.filter(t => t.id !== tableId);
+				renderTables();
+				renderDashboard();
+				Utils.showNotification('Mesa eliminada', 'success');
+			} catch (error) {
+				Utils.showNotification('Error al eliminar mesa', 'error');
+			}
 		}
 
 		async function freeTable(tableId) {
@@ -2053,7 +2067,7 @@
 			if (table) {
 				table.status = 'available';
 				table.currentOrder = null;
-				await API.save('tables', AppState.tables);
+				await API.update('tables', table.id, table);
 				renderTables();
 				renderDashboard();
 				Utils.showNotification('Mesa liberada', 'success');
@@ -2195,10 +2209,12 @@
 				const table = AppState.tables.find(t => t.id === order.tableId);
 				if (table) {
 					if (table.isTakeaway || order.isTakeaway) {
+						await API.delete('tables', table.id);
 						AppState.tables = AppState.tables.filter(t => t.id !== table.id);
 					} else {
 						table.status = 'available';
 						table.currentOrder = null;
+						await API.update('tables', table.id, table);
 					}
 				}
 
@@ -2208,10 +2224,10 @@
 				renderTables();
 
 				// 5. GUARDAR TODO EN SERVIDOR (ESPERAR CONFIRMACIÓN)
+				// Actualizamos solo el pedido y la nueva transacción
 				await Promise.all([
-					API.save('orders', AppState.orders),
-					API.save('transactions', AppState.transactions),
-					API.save('tables', AppState.tables)
+					API.update('orders', order.id, order),
+					API.update('transactions', transaction.id, transaction)
 				]);
 
 				// 6. Generar PDF después de confirmar guardado
@@ -2295,10 +2311,11 @@
 				}
 
 				// GUARDAR EN SERVIDOR Y ESPERAR CONFIRMACIÓN
-				await Promise.all([
-					API.save('orders', AppState.orders),
-					API.save('tables', AppState.tables)
-				]);
+				const updatePromises = [API.update('orders', order.id, order)];
+				if (table) {
+					updatePromises.push(API.update('tables', table.id, table));
+				}
+				await Promise.all(updatePromises);
 
 				// RECARGAR desde servidor
 				await loadInitialData();
@@ -2477,30 +2494,22 @@
 				return;
 			}
 
-			if (currentEditingMenuItem) {
-				currentEditingMenuItem.name = name;
-				currentEditingMenuItem.description = description;
-				currentEditingMenuItem.category = category;
-				currentEditingMenuItem.cost = cost;
-				currentEditingMenuItem.price = price;
-				currentEditingMenuItem.available = available;
-				currentEditingMenuItem.image = image;
-				const index = AppState.menuItems.findIndex(i => i.id === currentEditingMenuItem.id);
-				AppState.menuItems[index] = currentEditingMenuItem;
-			} else {
-				AppState.menuItems.push({
-					id: Utils.generateId(),
-					name,
-					description,
-					category,
-					cost,
-					price,
-					available,
-					image
-				});
+			const menuItem = currentEditingMenuItem || {
+				id: Utils.generateId(),
+				name,
+				description,
+				category,
+				cost,
+				price,
+				available,
+				image
+			};
+
+			if (!currentEditingMenuItem) {
+				AppState.menuItems.push(menuItem);
 			}
 
-			await API.save('menu_items', AppState.menuItems);
+			await API.update('menu_items', menuItem.id, menuItem);
 			closeMenuItemModal();
 			renderMenuConfig();
 			Utils.showNotification('Producto guardado', 'success');
@@ -2508,10 +2517,14 @@
 
 		async function deleteMenuItem(itemId) {
 			if (!confirm('¿Eliminar este producto?')) return;
-			AppState.menuItems = AppState.menuItems.filter(i => i.id !== itemId);
-			await API.save('menu_items', AppState.menuItems);
-			renderMenuConfig();
-			Utils.showNotification('Producto eliminado', 'success');
+			try {
+				await API.delete('menu_items', itemId);
+				AppState.menuItems = AppState.menuItems.filter(i => i.id !== itemId);
+				renderMenuConfig();
+				Utils.showNotification('Producto eliminado', 'success');
+			} catch (error) {
+				Utils.showNotification('Error al eliminar producto', 'error');
+			}
 		}
 
 		async function toggleProductAvailability(itemId) {
@@ -2525,7 +2538,7 @@
 			renderMenuConfig();
 
 			// Guardar en servidor en segundo plano
-			API.save('menu_items', AppState.menuItems).catch(error => {
+			API.update('menu_items', item.id, item).catch(error => {
 				console.error('Error guardando disponibilidad:', error);
 				// Revertir cambio si falla
 				item.available = !item.available;
@@ -2536,11 +2549,15 @@
 
 		async function deleteTransaction(transactionId) {
 			if (!confirm('¿Eliminar esta transacción?')) return;
-			AppState.transactions = AppState.transactions.filter(t => t.id !== transactionId);
-			await API.save('transactions', AppState.transactions);
-			renderFinance();
-			renderDashboard();
-			Utils.showNotification('Transacción eliminada', 'success');
+			try {
+				await API.delete('transactions', transactionId);
+				AppState.transactions = AppState.transactions.filter(t => t.id !== transactionId);
+				renderFinance();
+				renderDashboard();
+				Utils.showNotification('Transacción eliminada', 'success');
+			} catch (error) {
+				Utils.showNotification('Error al eliminar transacción', 'error');
+			}
 		}
 
 		async function viewTransactionInvoice(transactionId) {
@@ -2783,9 +2800,10 @@
 				}
 
 				// GUARDAR EN SERVIDOR Y ESPERAR CONFIRMACIÓN
+				const orderToSave = AppState.orders.find(o => o.id === tableInState.currentOrder);
 				await Promise.all([
-					API.save('orders', AppState.orders),
-					API.save('tables', AppState.tables)
+					API.update('orders', orderToSave.id, orderToSave),
+					API.update('tables', tableInState.id, tableInState)
 				]);
 
 				// RECARGAR desde servidor para garantizar sincronización
@@ -3076,8 +3094,8 @@
 
 		async function deleteClosure(closureId) {
 			if (!confirm('¿Eliminar este cierre de caja?')) return;
+			await API.delete('cash_closures', closureId);
 			AppState.cashClosures = AppState.cashClosures.filter(c => c.id !== closureId);
-			await API.save('cash_closures', AppState.cashClosures);
 			viewClosureHistory();
 			Utils.showNotification('Cierre eliminado', 'success');
 		}
@@ -3706,6 +3724,47 @@
 			}
 
 			alert(message);
+		}
+
+		// MANTENIMIENTO: Limpiar pedidos que quedaron pendientes por el bug anterior
+		async function cleanupPendingOrders() {
+			const pendingOrders = AppState.orders.filter(o => o.status === 'pending');
+			if (pendingOrders.length === 0) {
+				alert('No hay pedidos pendientes para limpiar.');
+				return;
+			}
+
+			if (!confirm(`¿Deseas marcar ${pendingOrders.length} pedidos como completados?\n\nEsto solo limpiará la lista de "Pedidos Activos" y no afectará las finanzas ni creará tickets.`)) {
+				return;
+			}
+
+			try {
+				const now = new Date().toISOString();
+				const promises = pendingOrders.map(order => {
+					order.status = 'completed';
+					order.completedAt = order.completedAt || now;
+					return API.update('orders', order.id, order);
+				});
+
+				await Promise.all(promises);
+
+				// Resetear estado de mesas ocupadas por estos pedidos
+				const tablesToFree = AppState.tables.filter(t => t.status === 'occupied' && pendingOrders.some(o => o.id === t.currentOrder));
+				const tablePromises = tablesToFree.map(table => {
+					table.status = 'available';
+					table.currentOrder = null;
+					return API.update('tables', table.id, table);
+				});
+
+				await Promise.all(tablePromises);
+
+				alert('¡Limpieza completada! La lista de pedidos ahora debería estar vacía.');
+				await loadInitialData();
+				renderAllSections();
+			} catch (error) {
+				alert('Error durante la limpieza: ' + error.message);
+				console.error(error);
+			}
 		}
 
 		// CONFIGURACIÓN DEL SISTEMA
