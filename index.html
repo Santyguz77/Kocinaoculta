@@ -1068,13 +1068,15 @@
 					try {
 						await loadInitialData();
 
-						// Solo actualizar la sección activa para no interrumpir formularios
+						// SIEMPRE sincronizar dashboard + orders juntos para evitar inconsistencias
+						renderDashboard();
+						renderOrders();
+
+						// Adicionalmente renderizar la sección activa si es otra
 						const activeSection = document.querySelector('.section.active');
 						if (activeSection) {
 							const sectionId = activeSection.id;
-							if (sectionId === 'dashboard') renderDashboard();
 							if (sectionId === 'tables') renderTables();
-							if (sectionId === 'orders') renderOrders();
 							if (sectionId === 'transactions') renderFinance();
 						}
 
@@ -1507,7 +1509,8 @@
 					if (order) {
 						let orderCost = 0;
 						order.items.forEach(item => {
-							const menuItem = AppState.menuItems.find(m => m.id === item.menuItemId);
+							const mId = item.menuItemId || item.itemId || item.id;
+							const menuItem = AppState.menuItems.find(m => m.id === mId);
 							const cost = menuItem?.cost || 0;
 							orderCost += cost * item.quantity;
 						});
@@ -1603,7 +1606,8 @@
 				if (order && amount > 0 && transaction.type === 'sale') {
 					let totalCost = 0;
 					order.items.forEach(item => {
-						const menuItem = AppState.menuItems.find(m => m.id === item.menuItemId);
+						const mId = item.menuItemId || item.itemId || item.id;
+						const menuItem = AppState.menuItems.find(m => m.id === mId);
 						const cost = menuItem?.cost || 0;
 						totalCost += cost * item.quantity;
 					});
@@ -1653,10 +1657,11 @@
 			let totalSale = getTransactionSignedAmount(transaction); // Usar el monto real de la transacción
 
 			const itemsWithProfit = order.items.map(item => {
-				const menuItem = AppState.menuItems.find(m => m.id === item.menuItemId);
+				const mId = item.menuItemId || item.itemId || item.id;
+				const menuItem = AppState.menuItems.find(m => m.id === mId);
 				const unitCost = menuItem?.cost || 0;
 				const totalItemCost = unitCost * item.quantity;
-				const totalItemSale = item.price * item.quantity;
+				const totalItemSale = (item.price || 0) * item.quantity;
 				const itemProfit = totalItemSale - totalItemCost;
 				const itemMargin = totalItemSale > 0 ? ((itemProfit / totalItemSale) * 100).toFixed(1) : 0;
 
@@ -1906,8 +1911,38 @@
 
 		// DASHBOARD
 		function renderDashboard() {
+			const activeOrders = AppState.orders.filter(o => o.status === 'pending');
+
+			// === AUTO-REPARAR MESAS INCONSISTENTES ===
+			// Si una mesa dice 'occupied' pero su pedido ya no es pending, liberarla
+			AppState.tables.forEach(table => {
+				if (table.status === 'occupied' && table.currentOrder) {
+					const linkedOrder = AppState.orders.find(o => o.id === table.currentOrder);
+					if (!linkedOrder || linkedOrder.status !== 'pending') {
+						console.warn(`[Auto-fix] Mesa ${table.number}: currentOrder apunta a pedido inexistente o no-pending. Liberando mesa.`);
+						table.status = 'available';
+						table.currentOrder = null;
+						API.update('tables', table.id, table).catch(e => console.error('Error auto-fix mesa:', e));
+					}
+				}
+			});
+
+			// Auto-reparar pedidos pendientes cuya mesa no los referencia
+			const referencedOrderIds = new Set(AppState.tables.map(t => t.currentOrder).filter(Boolean));
+			activeOrders.forEach(order => {
+				if (order.tableId && !order.isTakeaway && !referencedOrderIds.has(order.id)) {
+					const table = AppState.tables.find(t => t.id === order.tableId);
+					if (table && table.status === 'available' && !table.currentOrder) {
+						console.warn(`[Auto-fix] Re-vinculando pedido huérfano a Mesa ${table.number}`);
+						table.status = 'occupied';
+						table.currentOrder = order.id;
+						referencedOrderIds.add(order.id);
+						API.update('tables', table.id, table).catch(e => console.error('Error auto-fix pedido huérfano:', e));
+					}
+				}
+			});
+
 			const occupiedTables = AppState.tables.filter(t => t.status === 'occupied').length;
-			const activeOrders = AppState.orders.filter(o => o.status === 'pending').length;
 
 			// Calcular ventas usando la misma lógica que Finanzas (transacciones son la fuente de verdad)
 			const today = Utils.getDateKey();
@@ -1936,26 +1971,59 @@
 			});
 
 			document.getElementById('stat-tables').textContent = occupiedTables;
-			document.getElementById('stat-orders').textContent = activeOrders;
+			document.getElementById('stat-orders').textContent = activeOrders.length;
 			document.getElementById('stat-sales').textContent = Utils.formatCurrency(todaySales);
 			document.getElementById('stat-month').textContent = Utils.formatCurrency(monthSales);
 
 			const container = document.getElementById('dashboard-tables');
-			container.innerHTML = AppState.tables.map(table => {
-				const order = table.currentOrder ? AppState.orders.find(o => o.id === table.currentOrder) : null;
+
+			// Encontrar pedidos pendientes no vinculados a ninguna mesa
+			const currentReferencedIds = new Set(AppState.tables.map(t => t.currentOrder).filter(Boolean));
+			const orphanOrders = activeOrders.filter(o => !currentReferencedIds.has(o.id));
+
+			// Separar huérfanos en takeaway y otros
+			const takeawayOrders = orphanOrders.filter(o => o.isTakeaway);
+			const otherOrphanOrders = orphanOrders.filter(o => !o.isTakeaway);
+
+			// Crear tarjetas virtuales para todos los pedidos huérfanos
+			const virtualTables = [...takeawayOrders, ...otherOrphanOrders].map(order => ({
+				id: order.tableId || order.id,
+				number: order.tableNumber,
+				status: 'occupied',
+				currentOrder: order.id,
+				isTakeaway: order.isTakeaway || false,
+				isOrphan: !order.isTakeaway
+			}));
+
+			const allDisplayTables = [...AppState.tables, ...virtualTables];
+
+			// Ordenar por número de mesa
+			allDisplayTables.sort((a, b) => {
+				const numA = typeof a.number === 'string' && a.number.startsWith('PL-') ? 9999 + parseInt(a.number.split('-')[1]) : parseInt(a.number);
+				const numB = typeof b.number === 'string' && b.number.startsWith('PL-') ? 9999 + parseInt(b.number.split('-')[1]) : parseInt(b.number);
+				return numA - numB;
+			});
+
+			container.innerHTML = allDisplayTables.map(table => {
+				const order = table.currentOrder ? AppState.orders.find(o => o.id === table.currentOrder && o.status === 'pending') : null;
+				// Solo mostrar como ocupada si hay pedido pendiente activo
+				const actualStatus = (table.status === 'occupied' && !order) ? 'available' : table.status;
+
 				return `
-					<div class="table-card ${table.status}">
-						<div class="table-number">Mesa ${table.number}</div>
+					<div class="table-card ${actualStatus}">
+						<div class="table-number">
+							${table.isTakeaway ? '🥡 ' : ''}${table.isOrphan ? '⚠️ ' : ''}Mesa ${table.number}
+						</div>
 						<div class="table-status">
-							${renderStatusPill(table.status)}
+							${renderStatusPill(actualStatus)}
 						</div>
 						${order ? `<div class="badge badge-warning" style="margin-top: 8px; font-size: 11px;">
 							${order.items.length} productos | ${Utils.formatCurrency(order.total)}
 						</div>` : ''}
 						<div style="margin-top: 12px; display: flex; gap: 5px; flex-direction: column;">
-							${table.status === 'available' ?
+							${actualStatus === 'available' ?
 						`<button class="btn btn-small" onclick="event.stopPropagation(); openOrderModal('${table.id}')" style="width: 100%;"><span class="icon-dot icon-dot--info"></span><span>Tomar Pedido</span></button>` : ''}
-							${table.status === 'occupied' ?
+							${actualStatus === 'occupied' ?
 						`<button class="btn btn-small btn-warning" onclick="event.stopPropagation(); viewTableDetails('${table.id}')" style="width: 100%;"><span class="icon-dot icon-dot--warning"></span><span>Ver Pedido</span></button>
 							<button class="btn btn-small" onclick="event.stopPropagation(); openOrderModal('${table.id}')" style="width: 100%;"><span class="icon-dot icon-dot--success"></span><span>Añadir Items</span></button>` : ''}
 						</div>
@@ -1967,7 +2035,8 @@
 		// MESAS
 		function renderTables() {
 			const container = document.getElementById('tables-list');
-			container.innerHTML = AppState.tables.map(table => {
+			const sortedTables = [...AppState.tables].sort((a, b) => parseInt(a.number) - parseInt(b.number));
+			container.innerHTML = sortedTables.map(table => {
 				const order = table.currentOrder ? AppState.orders.find(o => o.id === table.currentOrder) : null;
 				const isTakeaway = table.isTakeaway || (order && order.isTakeaway);
 				return `
@@ -2062,14 +2131,24 @@
 		}
 
 		async function freeTable(tableId) {
-			if (!confirm('¿Liberar esta mesa?')) return;
+			if (!confirm('¿Liberar esta mesa? El pedido asociado será cancelado.')) return;
 			const table = AppState.tables.find(t => t.id === tableId);
 			if (table) {
+				// Cancelar el pedido asociado para que no quede huérfano
+				if (table.currentOrder) {
+					const order = AppState.orders.find(o => o.id === table.currentOrder);
+					if (order && order.status === 'pending') {
+						order.status = 'cancelled';
+						order.cancelledAt = new Date().toISOString();
+						await API.update('orders', order.id, order);
+					}
+				}
 				table.status = 'available';
 				table.currentOrder = null;
 				await API.update('tables', table.id, table);
 				renderTables();
 				renderDashboard();
+				renderOrders();
 				Utils.showNotification('Mesa liberada', 'success');
 			}
 		}
@@ -2079,16 +2158,45 @@
 			const container = document.getElementById('orders-list');
 			const activeOrders = AppState.orders.filter(o => o.status === 'pending');
 
+			// Auto-reparar: si un pedido pendiente tiene tableId pero la mesa no lo referencia, re-vincular
+			const referencedOrderIds = new Set(AppState.tables.map(t => t.currentOrder).filter(Boolean));
+			activeOrders.forEach(order => {
+				if (order.tableId && !order.isTakeaway && !referencedOrderIds.has(order.id)) {
+					const table = AppState.tables.find(t => t.id === order.tableId);
+					if (table && table.status === 'available' && !table.currentOrder) {
+						console.warn(`[Auto-fix Orders] Re-vinculando pedido Mesa ${order.tableNumber} a su mesa`);
+						table.status = 'occupied';
+						table.currentOrder = order.id;
+						referencedOrderIds.add(order.id);
+						API.update('tables', table.id, table).catch(e => console.error('Error auto-fix:', e));
+					}
+				}
+			});
+
 			if (activeOrders.length === 0) {
 				container.innerHTML = '<p class="text-center" style="color: var(--muted); padding: 40px;">No hay pedidos activos</p>';
 				return;
 			}
 
-			container.innerHTML = activeOrders.map(order => `
+			// Ordenar los pedidos para que coincidan con el orden visual del dashboard
+			const sortedOrders = [...activeOrders].sort((a, b) => {
+				const numA = typeof a.tableNumber === 'string' && a.tableNumber.startsWith('PL-') ? 9999 + parseInt(a.tableNumber.split('-')[1]) : parseInt(a.tableNumber);
+				const numB = typeof b.tableNumber === 'string' && b.tableNumber.startsWith('PL-') ? 9999 + parseInt(b.tableNumber.split('-')[1]) : parseInt(b.tableNumber);
+				if (numA !== numB) return numA - numB;
+				return new Date(a.createdAt) - new Date(b.createdAt);
+			});
+
+			container.innerHTML = sortedOrders.map(order => {
+				// Verificar si este pedido está vinculado a una mesa en el dashboard
+				const isLinkedToTable = referencedOrderIds.has(order.id);
+				const orphanWarning = !isLinkedToTable && !order.isTakeaway ?
+					'<span class="badge badge-danger" style="font-size: 10px; margin-left: 8px;">⚠️ Sin mesa vinculada</span>' : '';
+
+				return `
 				<div class="order-card">
 					<div class="order-header">
 						<div>
-							<strong style="color: var(--accent);">Mesa ${order.tableNumber}</strong>
+							<strong style="color: var(--accent);">Mesa ${order.tableNumber}</strong>${orphanWarning}
 							<div class="small">${Utils.formatDate(order.createdAt)}</div>
 						</div>
 						<div>
@@ -2111,7 +2219,8 @@
 						<button class="btn btn-danger" onclick="cancelOrder('${order.id}')"><span class="icon-dot icon-dot--danger"></span><span>Cancelar</span></button>
 					</div>
 				</div>
-			`).join('');
+			`;
+			}).join('');
 		}
 
 		let isCompletingOrder = false;
@@ -2205,8 +2314,12 @@
 				};
 				AppState.transactions.push(transaction);
 
-				// 3. Liberar mesa
-				const table = AppState.tables.find(t => t.id === order.tableId);
+				// 3. Liberar mesa - buscar por tableId O por currentOrder como fallback
+				let table = AppState.tables.find(t => t.id === order.tableId);
+				if (!table) {
+					// Fallback: buscar cualquier mesa que referencie esta orden
+					table = AppState.tables.find(t => t.currentOrder === order.id);
+				}
 				if (table) {
 					if (table.isTakeaway || order.isTakeaway) {
 						await API.delete('tables', table.id);
@@ -2303,16 +2416,27 @@
 				}
 
 				order.status = 'cancelled';
+				order.cancelledAt = new Date().toISOString();
 
-				const table = AppState.tables.find(t => t.id === order.tableId);
+				// Buscar mesa por tableId O por currentOrder como fallback
+				let table = AppState.tables.find(t => t.id === order.tableId);
+				if (!table) {
+					table = AppState.tables.find(t => t.currentOrder === order.id);
+				}
 				if (table) {
-					table.status = 'available';
-					table.currentOrder = null;
+					if (table.isTakeaway || order.isTakeaway) {
+						// Eliminar mesas takeaway al cancelar (igual que al completar)
+						await API.delete('tables', table.id);
+						AppState.tables = AppState.tables.filter(t => t.id !== table.id);
+					} else {
+						table.status = 'available';
+						table.currentOrder = null;
+					}
 				}
 
 				// GUARDAR EN SERVIDOR Y ESPERAR CONFIRMACIÓN
 				const updatePromises = [API.update('orders', order.id, order)];
-				if (table) {
+				if (table && !table.isTakeaway && !order.isTakeaway) {
 					updatePromises.push(API.update('tables', table.id, table));
 				}
 				await Promise.all(updatePromises);

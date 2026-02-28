@@ -193,30 +193,38 @@ window.addEventListener('offline', () => {
 // Cargar datos iniciales - Solo desde backend
 async function loadInitialData() {
 	try {
-		AppState.menuItems = await API.getAll('menu_items');
-		AppState.tables = await API.getAll('tables');
-		AppState.orders = await API.getAll('orders');
-		AppState.transactions = await API.getAll('transactions');
-		AppState.waiters = await API.getAll('waiters');
-		
-		// Intentar cargar cash_closures, si falla, usar array vacío
+		const [menuItems, tables, orders, transactions, waiters, configArray] = await Promise.all([
+			API.getAll('menu_items'),
+			API.getAll('tables'),
+			API.getAll('orders'),
+			API.getAll('transactions'),
+			API.getAll('waiters'),
+			API.getAll('config')
+		]);
+
+		AppState.menuItems = menuItems;
+		AppState.tables = tables;
+		AppState.orders = orders;
+		AppState.transactions = transactions;
+		AppState.waiters = waiters;
+		AppState.config = configArray.length > 0 ? configArray[0] : {};
+
 		try {
 			AppState.cashClosures = await API.getAll('cash_closures');
 		} catch (err) {
-			console.warn('⚠️ Tabla cash_closures no disponible en el servidor');
+			console.warn('⚠️ Tabla cash_closures no disponible');
 			AppState.cashClosures = [];
 		}
-		
-		const configArray = await API.getAll('config');
-		AppState.config = configArray.length > 0 ? configArray[0] : {};
 	} catch (error) {
-		console.error('Error cargando datos iniciales:', error);
+		console.error('Error crítico cargando datos:', error);
+		// No limpiar el estado si falla la carga para conservar lo que haya en memoria (si aplica)
 		throw error;
 	}
 }
 
-// Inicializar datos de ejemplo si no existen
+// Inicializar datos de ejemplo SOLO si el servidor confirma que están vacíos
 async function initializeDefaultData() {
+	// Verificar si realmente necesitamos inicializar (solo si las tablas críticas están vacías)
 	if (AppState.menuItems.length === 0) {
 		AppState.menuItems = [
 			{

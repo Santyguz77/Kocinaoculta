@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,9 +15,11 @@
 			max-width: 1400px;
 			margin: 0 auto;
 		}
+
 		.order-items {
 			margin-top: 20px;
 		}
+
 		.order-item {
 			background: rgba(0, 0, 0, 0.3);
 			padding: 15px;
@@ -24,22 +27,26 @@
 			margin-bottom: 10px;
 			border-left: 3px solid var(--accent);
 		}
+
 		.order-item-header {
 			display: flex;
 			justify-content: space-between;
 			align-items: center;
 			margin-bottom: 10px;
 		}
+
 		.order-item-name {
 			font-size: 16px;
 			font-weight: 600;
 			color: var(--accent);
 		}
+
 		.order-item-quantity {
 			display: flex;
 			align-items: center;
 			gap: 10px;
 		}
+
 		.quantity-btn {
 			width: 30px;
 			height: 30px;
@@ -53,20 +60,24 @@
 			align-items: center;
 			justify-content: center;
 		}
+
 		.quantity-display {
 			font-size: 18px;
 			font-weight: 700;
 			min-width: 30px;
 			text-align: center;
 		}
+
 		.order-item-notes {
 			margin-top: 10px;
 		}
+
 		.order-item-notes textarea {
 			width: 100%;
 			min-height: 60px;
 			resize: vertical;
 		}
+
 		.order-summary {
 			background: linear-gradient(135deg, var(--panel), var(--card));
 			padding: 20px;
@@ -74,6 +85,7 @@
 			margin-top: 20px;
 			border: 2px solid var(--accent);
 		}
+
 		.order-total {
 			font-size: 24px;
 			font-weight: 700;
@@ -81,12 +93,14 @@
 			text-align: right;
 			margin-top: 10px;
 		}
+
 		.category-filter {
 			display: flex;
 			gap: 10px;
 			margin-bottom: 20px;
 			flex-wrap: wrap;
 		}
+
 		.category-btn {
 			padding: 8px 16px;
 			border-radius: 20px;
@@ -96,15 +110,18 @@
 			cursor: pointer;
 			transition: all 0.3s;
 		}
+
 		.category-btn.active {
 			background: #ffffff;
 			color: #000000;
 		}
+
 		.back-button {
 			margin-bottom: 20px;
 		}
 	</style>
 </head>
+
 <body>
 	<script>
 		// Verificar sesión de mesero
@@ -128,7 +145,8 @@
 						<img src="image.png" alt="Logo" style="width: 50px; height: 50px; border-radius: 50%;">
 						<h1>Selecciona una Mesa</h1>
 					</div>
-					<button class="btn btn-danger" onclick="logout()" style="background: #ffffff; color: #000000;">🚺 Cerrar</button>
+					<button class="btn btn-danger" onclick="logout()" style="background: #ffffff; color: #000000;">🚺
+						Cerrar</button>
 				</div>
 				<div class="tables-grid" id="tables-grid"></div>
 			</div>
@@ -138,7 +156,7 @@
 				<div class="back-button">
 					<button class="btn btn-secondary" onclick="backToTables()">← Volver a Mesas</button>
 				</div>
-				
+
 				<div class="header">
 					<h1>Mesa <span id="current-table-number"></span></h1>
 					<div class="controls">
@@ -183,12 +201,13 @@
 		// Renderizar mesas
 		function renderTables() {
 			const container = document.getElementById('tables-grid');
-			container.innerHTML = AppState.tables.map(table => `
+			const sortedTables = [...AppState.tables].sort((a, b) => parseInt(a.number) - parseInt(b.number));
+			container.innerHTML = sortedTables.map(table => `
 				<div class="table-card ${table.status}" onclick="selectTable('${table.id}')">
 					<div class="table-number">Mesa ${table.number}</div>
 					<div class="table-status">
-						${table.status === 'available' ? '✅ Disponible' : 
-						  table.status === 'occupied' ? '🔴 Ocupada' : '📝 Reservada'}
+						${table.status === 'available' ? '✅ Disponible' :
+					table.status === 'occupied' ? '🔴 Ocupada' : '📝 Reservada'}
 					</div>
 					${table.currentOrder ? `<div class="badge badge-info" style="margin-top: 10px;">Con pedido</div>` : ''}
 				</div>
@@ -215,7 +234,7 @@
 			document.getElementById('current-table-number').textContent = currentTable.number;
 			document.getElementById('table-selection-view').classList.add('hidden');
 			document.getElementById('order-view').classList.remove('hidden');
-			
+
 			renderCategories();
 			renderMenu();
 			renderOrderItems();
@@ -251,10 +270,10 @@
 
 		// Renderizar menú
 		function renderMenu() {
-			const filteredItems = selectedCategory === 'all' 
-				? AppState.menuItems 
+			const filteredItems = selectedCategory === 'all'
+				? AppState.menuItems
 				: AppState.menuItems.filter(item => item.category === selectedCategory);
-			
+
 			const container = document.getElementById('menu-grid');
 			container.innerHTML = filteredItems
 				.filter(item => item.available)
@@ -278,12 +297,12 @@
 			const menuItem = AppState.menuItems.find(m => m.id === itemId);
 			if (!menuItem) return;
 
-			const existingItem = currentOrder.items.find(i => i.itemId === itemId);
+			const existingItem = currentOrder.items.find(i => i.menuItemId === itemId);
 			if (existingItem) {
 				existingItem.quantity++;
 			} else {
 				currentOrder.items.push({
-					itemId: itemId,
+					menuItemId: itemId,
 					name: menuItem.name,
 					price: menuItem.price,
 					quantity: 1,
@@ -296,7 +315,7 @@
 		// Renderizar items del pedido
 		function renderOrderItems() {
 			const container = document.getElementById('order-items');
-			
+
 			if (currentOrder.items.length === 0) {
 				container.innerHTML = '<p class="text-center" style="color: var(--muted);">No hay productos en el pedido</p>';
 				document.getElementById('order-total').textContent = 'Total: $0.00';
@@ -391,8 +410,10 @@
 			AppState.tables[tableIndex] = currentTable;
 
 			// Guardar en API
-			await API.save('orders', AppState.orders);
-			await API.save('tables', AppState.tables);
+			await Promise.all([
+				API.update('orders', order.id, order),
+				API.update('tables', currentTable.id, currentTable)
+			]);
 
 			Utils.showNotification('Pedido guardado correctamente', 'success');
 			backToTables();
@@ -410,4 +431,5 @@
 		init();
 	</script>
 </body>
+
 </html>
