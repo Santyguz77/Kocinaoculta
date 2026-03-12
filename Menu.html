@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,6 +15,7 @@
 			max-width: 1200px;
 			margin: 0 auto;
 		}
+
 		.menu-header {
 			text-align: center;
 			padding: 40px 20px;
@@ -21,28 +23,34 @@
 			border-radius: 12px;
 			margin-bottom: 30px;
 		}
+
 		.menu-header h1 {
 			font-size: 48px;
 			color: var(--accent);
 			margin-bottom: 10px;
 		}
+
 		.menu-header p {
 			font-size: 18px;
 			color: var(--muted);
 		}
+
 		.search-bar {
 			max-width: 500px;
 			margin: 0 auto 30px;
 		}
+
 		.search-bar input {
 			width: 100%;
 			padding: 15px 20px;
 			font-size: 16px;
 			border-radius: 25px;
 		}
+
 		.category-section {
 			margin-bottom: 40px;
 		}
+
 		.category-title {
 			font-size: 28px;
 			color: var(--accent);
@@ -50,6 +58,7 @@
 			padding-bottom: 10px;
 			border-bottom: 2px solid var(--accent);
 		}
+
 		.menu-item-card {
 			display: flex;
 			background: linear-gradient(135deg, var(--panel), var(--card));
@@ -60,33 +69,40 @@
 			transition: all 0.3s;
 			border: 1px solid rgba(255, 255, 255, 0.05);
 		}
+
 		.menu-item-card:hover {
 			transform: translateX(10px);
 			box-shadow: 0 6px 20px rgba(255, 255, 255, 0.3);
 		}
+
 		.menu-item-content {
 			flex: 1;
 			padding: 20px;
 		}
+
 		.menu-item-name {
 			font-size: 22px;
 			font-weight: 700;
 			color: var(--accent);
 			margin-bottom: 8px;
 		}
+
 		.menu-item-description {
 			color: var(--muted);
 			margin-bottom: 15px;
 			line-height: 1.5;
 		}
+
 		.menu-item-price {
 			font-size: 28px;
 			font-weight: 700;
 			color: var(--success);
 		}
+
 		.not-available {
 			opacity: 0.5;
 		}
+
 		.not-available-badge {
 			display: inline-block;
 			background: var(--danger);
@@ -96,6 +112,7 @@
 			font-size: 12px;
 			margin-left: 10px;
 		}
+
 		.category-filter {
 			display: flex;
 			flex-wrap: wrap;
@@ -104,6 +121,7 @@
 			margin-bottom: 40px;
 			padding: 0 20px;
 		}
+
 		.category-btn {
 			background: rgba(255, 255, 255, 0.05);
 			color: var(--text);
@@ -116,6 +134,7 @@
 			transition: all 0.3s ease;
 			backdrop-filter: blur(10px);
 		}
+
 		.category-btn:hover {
 			background: rgba(255, 255, 255, 0.1);
 			border-color: var(--accent);
@@ -123,30 +142,36 @@
 			transform: translateY(-2px);
 			box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
 		}
+
 		.category-btn.active {
 			background: linear-gradient(135deg, #ffffff, #e0e0e0);
 			color: #000000;
 			border-color: #ffffff;
 			box-shadow: 0 6px 16px rgba(255, 255, 255, 0.4);
 		}
+
 		@media (max-width: 768px) {
 			.menu-header h1 {
 				font-size: 36px;
 			}
+
 			.menu-item-name {
 				font-size: 18px;
 			}
+
 			.menu-item-price {
 				font-size: 24px;
 			}
 		}
 	</style>
 </head>
+
 <body>
 	<div class="app">
 		<div class="main menu-layout">
 			<div class="menu-header">
-				<img src="image.png" alt="Logo" style="width: 80px; height: 80px; border-radius: 50%; margin-bottom: 15px;">
+				<img src="image.png" alt="Logo"
+					style="width: 80px; height: 80px; border-radius: 50%; margin-bottom: 15px;">
 				<h1>Nuestro Menú</h1>
 				<p>Descubre nuestra deliciosa selección</p>
 			</div>
@@ -178,8 +203,13 @@
 
 		function renderCategoryButtons() {
 			const categories = [...new Set(allMenuItems.map(item => item.category))];
+			categories.sort((a, b) => {
+				if (a.toLowerCase() === 'hamburguesas') return -1;
+				if (b.toLowerCase() === 'hamburguesas') return 1;
+				return a.localeCompare(b);
+			});
 			const container = document.querySelector('.category-filter');
-			
+
 			container.innerHTML = `
 				<button class="category-btn ${currentFilter === 'all' ? 'active' : ''}" onclick="filterByCategory('all')">Todos</button>
 				${categories.map(cat => `
@@ -200,13 +230,13 @@
 
 		function renderMenu() {
 			const searchTerm = document.getElementById('search-input').value.toLowerCase();
-			
-			let filteredItems = currentFilter === 'all' 
-				? allMenuItems 
+
+			let filteredItems = currentFilter === 'all'
+				? allMenuItems
 				: allMenuItems.filter(item => item.category === currentFilter);
-			
+
 			if (searchTerm) {
-				filteredItems = filteredItems.filter(item => 
+				filteredItems = filteredItems.filter(item =>
 					item.name.toLowerCase().includes(searchTerm) ||
 					(item.description && item.description.toLowerCase().includes(searchTerm))
 				);
@@ -222,7 +252,7 @@
 			});
 
 			const container = document.getElementById('menu-content');
-			
+
 			if (filteredItems.length === 0) {
 				container.innerHTML = '<p class="text-center" style="color: var(--muted); padding: 40px;">No se encontraron platillos</p>';
 				return;
@@ -257,4 +287,5 @@
 		init();
 	</script>
 </body>
+
 </html>

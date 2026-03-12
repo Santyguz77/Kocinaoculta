@@ -679,6 +679,19 @@
 				</div>
 
 				<div class="card" style="margin-bottom: 20px;">
+					<h3 class="heading-with-icon" style="color: var(--success); margin-bottom: 15px;"><span
+							class="icon-dot icon-dot--success"></span><span>Copia de Seguridad</span></h3>
+					<p style="color: var(--muted); margin-bottom: 15px;">
+						Descarga una copia completa de la base de datos actual (menú, mesas, órdenes, historial, etc.)
+						en un archivo JSON.
+					</p>
+					<button class="btn btn-success" onclick="exportBackup()">
+						<span class="icon-dot icon-dot--success"></span><span>Exportar Datos (Backup)</span>
+					</button>
+				</div>
+
+
+				<div class="card" style="margin-bottom: 20px;">
 					<h3 class="heading-with-icon" style="color: #ff4444; margin-bottom: 15px;"><span
 							class="icon-dot icon-dot--danger"></span><span>Zona de Peligro</span></h3>
 					<p style="color: var(--muted); margin-bottom: 20px;">
@@ -2618,6 +2631,16 @@
 				return;
 			}
 
+			if (currentEditingMenuItem) {
+				currentEditingMenuItem.name = name;
+				currentEditingMenuItem.description = description;
+				currentEditingMenuItem.category = category;
+				currentEditingMenuItem.cost = cost;
+				currentEditingMenuItem.price = price;
+				currentEditingMenuItem.available = available;
+				currentEditingMenuItem.image = image;
+			}
+
 			const menuItem = currentEditingMenuItem || {
 				id: Utils.generateId(),
 				name,
@@ -2778,6 +2801,11 @@
 
 		function renderOrderModalMenu() {
 			const categories = [...new Set(AppState.menuItems.filter(i => i.available).map(i => i.category))];
+			categories.sort((a, b) => {
+				if (a.toLowerCase() === 'hamburguesas') return -1;
+				if (b.toLowerCase() === 'hamburguesas') return 1;
+				return a.localeCompare(b);
+			});
 			const container = document.getElementById('order-menu-items');
 
 			container.innerHTML = categories.map(category => `
@@ -3892,6 +3920,28 @@
 		}
 
 		// CONFIGURACIÓN DEL SISTEMA
+		function exportBackup() {
+			try {
+				const dataStr = JSON.stringify(AppState, null, 2);
+				const blob = new Blob([dataStr], { type: "application/json" });
+				const url = URL.createObjectURL(blob);
+
+				const a = document.createElement('a');
+				const date = Utils.getDateKey().replace(/-/g, '');
+				a.href = url;
+				a.download = `kocina_oculta_backup_${date}.json`;
+				document.body.appendChild(a);
+				a.click();
+				document.body.removeChild(a);
+				URL.revokeObjectURL(url);
+
+				Utils.showNotification('Copia de seguridad descargada', 'success');
+			} catch (e) {
+				console.error('Error al exportar backup:', e);
+				alert('No se pudo generar la copia de seguridad.');
+			}
+		}
+
 		async function resetSalesData() {
 			const confirmation = prompt(
 				'ADVERTENCIA: Esta acción eliminará TODOS los datos de ventas de forma PERMANENTE.\n\n' +

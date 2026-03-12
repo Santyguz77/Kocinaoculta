@@ -251,7 +251,13 @@
 
 		// Renderizar categorías
 		function renderCategories() {
-			const categories = ['all', ...new Set(AppState.menuItems.map(item => item.category))];
+			let categories = [...new Set(AppState.menuItems.map(item => item.category))];
+			categories.sort((a, b) => {
+				if (a.toLowerCase() === 'hamburguesas') return -1;
+				if (b.toLowerCase() === 'hamburguesas') return 1;
+				return a.localeCompare(b);
+			});
+			categories = ['all', ...categories];
 			const container = document.getElementById('category-filter');
 			container.innerHTML = categories.map(cat => `
 				<button class="category-btn ${cat === selectedCategory ? 'active' : ''}" 
