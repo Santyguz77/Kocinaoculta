@@ -3438,8 +3438,7 @@
 			const today = Utils.getDateKey();
 			const thisMonth = Utils.getMonthKey();
 
-			// Fecha de inicio para el cálculo del mes (reinicio desde 2026-02-07)
-			const monthStartDate = '2026-02-07';
+			// Fecha original del cálculo del mes fue removida para calcular estrictamente el mes actual
 
 			let profitToday = 0;
 			let profitMonth = 0;
@@ -3464,7 +3463,7 @@
 				if (transactionDate === today) {
 					totalSalesTodayFromTransactions += amount;
 				}
-				if (transactionDate >= monthStartDate) {
+				if (transactionMonth === thisMonth) {
 					totalSalesMonthFromTransactions += amount;
 				}
 
@@ -3487,7 +3486,7 @@
 							profitToday += orderProfit;
 							salesToday += amount;
 						}
-						if (transactionDate >= monthStartDate) {
+						if (transactionMonth === thisMonth) {
 							profitMonth += orderProfit;
 							salesMonth += amount;
 							ordersMonthCount++;
