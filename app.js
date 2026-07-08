@@ -1,5 +1,5 @@
 // Configuración de la API
-const API_URL = 'https://auction-array-comedy-its.trycloudflare.com/api'; // Cambiar por tu VPS en producción
+const API_URL = 'https://absent-run-raid-ftp.trycloudflare.com/api';
 const APP_TIMEZONE = 'America/Bogota';
 
 // Estado global de la aplicación
@@ -32,7 +32,7 @@ const Storage = {
 const API = {
 	async getAll(table) {
 		try {
-			const response = await fetch(`${API_URL}/${table}`, { 
+			const response = await fetch(`${API_URL}/${table}`, {
 				timeout: 10000 // 10 segundos timeout
 			});
 			if (!response.ok) {
@@ -46,7 +46,7 @@ const API = {
 			throw error;
 		}
 	},
-	
+
 	async save(table, items, retries = 2) {
 		for (let i = 0; i <= retries; i++) {
 			try {
@@ -67,7 +67,7 @@ const API = {
 			}
 		}
 	},
-	
+
 	async update(table, id, item) {
 		try {
 			const response = await fetch(`${API_URL}/${table}/${id}`, {
@@ -82,7 +82,7 @@ const API = {
 			throw error;
 		}
 	},
-	
+
 	async delete(table, id) {
 		try {
 			const response = await fetch(`${API_URL}/${table}/${id}`, {
@@ -102,14 +102,14 @@ const Utils = {
 	generateId() {
 		return Date.now().toString(36) + Math.random().toString(36).substr(2);
 	},
-	
+
 	formatCurrency(amount) {
 		return new Intl.NumberFormat('es-MX', {
 			style: 'currency',
 			currency: 'MXN'
 		}).format(amount);
 	},
-	
+
 	formatDate(date) {
 		return new Intl.DateTimeFormat('es-MX', {
 			year: 'numeric',
@@ -160,7 +160,7 @@ const Utils = {
 			day: 'numeric'
 		}).format(anchor);
 	},
-	
+
 	showNotification(message, type = 'info') {
 		console.log(`[${type.toUpperCase()}] ${message}`);
 		// Solo mostrar alertas para errores críticos
@@ -269,7 +269,7 @@ async function initializeDefaultData() {
 			await API.save('menu_items', AppState.menuItems);
 		}
 	}
-	
+
 	if (AppState.tables.length === 0) {
 		AppState.tables = [];
 		for (let i = 1; i <= 10; i++) {
@@ -283,7 +283,7 @@ async function initializeDefaultData() {
 		}
 		await API.save('tables', AppState.tables);
 	}
-	
+
 	if (AppState.waiters.length === 0) {
 		AppState.waiters = [
 			{
