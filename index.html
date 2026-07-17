@@ -683,11 +683,18 @@
 							class="icon-dot icon-dot--success"></span><span>Copia de Seguridad</span></h3>
 					<p style="color: var(--muted); margin-bottom: 15px;">
 						Descarga una copia completa de la base de datos actual (menú, mesas, órdenes, historial, etc.)
-						en un archivo JSON.
+						en un archivo JSON, o restaura una copia previamente guardada.
 					</p>
-					<button class="btn btn-success" onclick="exportBackup()">
-						<span class="icon-dot icon-dot--success"></span><span>Exportar Datos (Backup)</span>
-					</button>
+					<div style="display: flex; gap: 10px; flex-wrap: wrap;">
+						<button class="btn btn-success" onclick="exportBackup()">
+							<span class="icon-dot icon-dot--success"></span><span>Exportar Datos (Backup)</span>
+						</button>
+						<button class="btn btn-success" onclick="document.getElementById('import-backup-file').click()">
+							<span class="icon-dot icon-dot--success"></span><span>Importar Datos (Backup)</span>
+						</button>
+						<input type="file" id="import-backup-file" accept=".json" style="display: none;"
+							onchange="importBackup(event)">
+					</div>
 				</div>
 
 
@@ -3939,6 +3946,90 @@
 				console.error('Error al exportar backup:', e);
 				alert('No se pudo generar la copia de seguridad.');
 			}
+		}
+
+		async function importBackup(event) {
+			const file = event.target.files[0];
+			if (!file) return;
+
+			// Resetear valor para permitir volver a cargar el mismo archivo si es necesario
+			const fileInput = event.target;
+			const resetFileInput = () => { fileInput.value = ''; };
+
+			const confirm1 = confirm("¿Está seguro de que desea restaurar esta copia de seguridad? Esto reemplazará TODOS los datos actuales de la base de datos de forma permanente e irreversible.");
+			if (!confirm1) {
+				resetFileInput();
+				return;
+			}
+
+			const confirm2 = prompt("Para confirmar la restauración de datos, escriba 'RESTAURAR' (en mayúsculas):");
+			if (confirm2 !== 'RESTAURAR') {
+				alert("Operación cancelada.");
+				resetFileInput();
+				return;
+			}
+
+			const reader = new FileReader();
+			reader.onload = async function (e) {
+				try {
+					const data = JSON.parse(e.target.result);
+
+					// Validación de estructura básica
+					const hasMenu = Array.isArray(data.menuItems) || Array.isArray(data.menu_items);
+					const hasTables = Array.isArray(data.tables);
+
+					if (!hasMenu && !hasTables) {
+						throw new Error("El archivo no contiene un formato de copia de seguridad válido (debe incluir 'menuItems' o 'tables').");
+					}
+
+					// Extraer y normalizar los datos
+					const menuItems = data.menuItems || data.menu_items || [];
+					const tables = data.tables || [];
+					const orders = data.orders || [];
+					const transactions = data.transactions || [];
+					const waiters = data.waiters || [];
+					const cashClosures = data.cashClosures || data.cash_closures || [];
+
+					let config = data.config || {};
+					let configArray = [];
+					if (config && typeof config === 'object') {
+						if (Array.isArray(config)) {
+							configArray = config;
+						} else if (Object.keys(config).length > 0) {
+							if (!config.id) config.id = 'default';
+							configArray = [config];
+						}
+					}
+
+					// Mostrar estado de carga y guardar en base de datos
+					Utils.showNotification('Restaurando datos...', 'info');
+
+					await API.save('menu_items', menuItems);
+					await API.save('tables', tables);
+					await API.save('orders', orders);
+					await API.save('transactions', transactions);
+					await API.save('waiters', waiters);
+					await API.save('cash_closures', cashClosures);
+					if (configArray.length > 0) {
+						await API.save('config', configArray);
+					}
+
+					alert("¡Copia de seguridad restaurada con éxito! La página se recargará para aplicar los cambios.");
+					window.location.reload();
+				} catch (error) {
+					console.error("Error al restaurar copia de seguridad:", error);
+					alert("No se pudo restaurar la copia de seguridad: " + error.message);
+				} finally {
+					resetFileInput();
+				}
+			};
+
+			reader.onerror = function () {
+				alert("Error al leer el archivo seleccionado.");
+				resetFileInput();
+			};
+
+			reader.readAsText(file);
 		}
 
 		async function resetSalesData() {
