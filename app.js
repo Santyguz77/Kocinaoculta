@@ -1,5 +1,5 @@
 // Configuración de la API
-const API_URL = 'https://proc-semiconductor-dust-careful.trycloudflare.com/api';
+const API_URL = 'https://climbing-previous-partner-gradually.trycloudflare.com/api';
 const APP_TIMEZONE = 'America/Bogota';
 
 // Estado global de la aplicación
