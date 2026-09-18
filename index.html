@@ -4,7 +4,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Panel de Control</title>
+	<title>UMBRAL - Panel de Control</title>
 	<link rel="icon" href="/icon-192.png" type="image/png">
 	<link rel="stylesheet" href="styles.css">
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
@@ -253,7 +253,7 @@
 			<div class="brand">
 				<img src="image.png" alt="Logo"
 					style="width: 60px; height: 60px; border-radius: 50%; margin-bottom: 10px;">
-				<div>Kocina Oculta</div>
+				<div>UMBRAL</div>
 				<span>Panel de Control</span>
 			</div>
 			<ul class="menu">
@@ -383,7 +383,10 @@
 									<th>Nombre</th>
 									<th>Descripción</th>
 									<th>Categoría</th>
-									<th>Costo</th>
+									<th>Costo Base</th>
+									<th>Costo Prod.</th>
+									<th>Costo Caja</th>
+									<th>Costo Total</th>
 									<th>Precio</th>
 									<th>Ganancia</th>
 									<th>Margen</th>
@@ -453,12 +456,23 @@
 						</div>
 					</div>
 
-					<div class="dashboard-grid" style="margin-bottom: 25px;">
+					<div class="dashboard-grid"
+						style="margin-bottom: 25px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
 						<div class="stat-card">
 							<h3>Ingresos</h3>
 							<div class="value" id="finance-total-income">$0</div>
 							<small style="color: var(--muted); font-size: 13px;" id="finance-total-count">0
 								transacciones</small>
+						</div>
+						<div class="stat-card">
+							<h3>Costo Producción</h3>
+							<div class="value" id="finance-total-production-cost" style="color: #ff9800;">$0.00</div>
+							<small style="color: var(--muted); font-size: 13px;">Gasto en insumos</small>
+						</div>
+						<div class="stat-card">
+							<h3>Costo Cajas</h3>
+							<div class="value" id="finance-total-box-cost" style="color: #00bcd4;">$0.00</div>
+							<small style="color: var(--muted); font-size: 13px;">Gasto en envases</small>
 						</div>
 						<div class="stat-card">
 							<h3>Rentabilidad</h3>
@@ -575,6 +589,55 @@
 					</div>
 				</div>
 
+				<!-- Resumen General de Costos -->
+				<div class="card" style="margin-bottom: 25px; border-left: 4px solid #2196F3;">
+					<h3 class="heading-with-icon" style="color: #2196F3; margin-bottom: 15px;">
+						<span class="icon-dot icon-dot--info"></span>
+						<span>Resumen General de Costos (Base, Producción y Cajas)</span>
+					</h3>
+					<div class="dashboard-grid"
+						style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
+						<div
+							style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
+							<small
+								style="color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Gasto
+								Total Costo Base</small>
+							<div class="value" id="cost-total-base"
+								style="font-size: 22px; color: #4caf50; font-weight: 700; margin-top: 5px;">$0.00</div>
+							<small style="color: var(--muted); font-size: 12px;">Costo original / general</small>
+						</div>
+						<div
+							style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
+							<small
+								style="color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Gasto
+								Total Producción</small>
+							<div class="value" id="cost-total-production"
+								style="font-size: 22px; color: #ff9800; font-weight: 700; margin-top: 5px;">$0.00</div>
+							<small style="color: var(--muted); font-size: 12px;">Insumos / Fabricación</small>
+						</div>
+						<div
+							style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
+							<small
+								style="color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Gasto
+								Total Cajas</small>
+							<div class="value" id="cost-total-box"
+								style="font-size: 22px; color: #00bcd4; font-weight: 700; margin-top: 5px;">$0.00</div>
+							<small style="color: var(--muted); font-size: 12px;">Empaques / Envases</small>
+						</div>
+						<div
+							style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
+							<small
+								style="color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Gasto
+								Total Combinado</small>
+							<div class="value" id="cost-total-combined"
+								style="font-size: 22px; color: var(--text); font-weight: 700; margin-top: 5px;">$0.00
+							</div>
+							<small style="color: var(--muted); font-size: 12px;" id="cost-ratio-display">Base 0% | Prod
+								0% | Cajas 0%</small>
+						</div>
+					</div>
+				</div>
+
 				<!-- Métricas Principales -->
 				<div class="dashboard-grid" style="margin-bottom: 30px;">
 					<div class="stat-card">
@@ -660,6 +723,9 @@
 								<tr>
 									<th>Producto</th>
 									<th>Unidades Vendidas</th>
+									<th>Costo Base</th>
+									<th>Costo Prod.</th>
+									<th>Costo Cajas</th>
 									<th>Costo Total</th>
 									<th>Ventas Totales</th>
 									<th>Ganancia Total</th>
@@ -823,22 +889,37 @@
 				<label>Categoría</label>
 				<input type="text" id="item-category" placeholder="Ej: Hamburguesas">
 			</div>
-			<div class="form-row">
-				<div class="form-group" style="flex: 1;">
-					<label>Costo de Producción</label>
+			<div class="form-row" style="display: flex; gap: 10px; flex-wrap: wrap;">
+				<div class="form-group" style="flex: 1; min-width: 120px;">
+					<label>Costo Base</label>
 					<input type="number" id="item-cost" placeholder="0.00" step="0.01" oninput="updateProfitPreview()">
-					<small style="color: var(--muted); display: block; margin-top: 4px;">¿Cuánto te cuesta
-						producirlo?</small>
+					<small style="color: var(--muted); display: block; margin-top: 4px;">Costo general</small>
 				</div>
-				<div class="form-group" style="flex: 1;">
+				<div class="form-group" style="flex: 1; min-width: 120px;">
+					<label>Costo Producción</label>
+					<input type="number" id="item-production-cost" placeholder="0.00" step="0.01"
+						oninput="updateProfitPreview()">
+					<small style="color: var(--muted); display: block; margin-top: 4px;">Insumos / Ingredientes</small>
+				</div>
+				<div class="form-group" style="flex: 1; min-width: 120px;">
+					<label>Costo Caja</label>
+					<input type="number" id="item-box-cost" placeholder="0.00" step="0.01"
+						oninput="updateProfitPreview()">
+					<small style="color: var(--muted); display: block; margin-top: 4px;">Empaque / Envase</small>
+				</div>
+				<div class="form-group" style="flex: 1; min-width: 120px;">
 					<label>Precio de Venta</label>
 					<input type="number" id="item-price" placeholder="0.00" step="0.01" oninput="updateProfitPreview()">
-					<small style="color: var(--muted); display: block; margin-top: 4px;">¿A cuánto lo vendes?</small>
+					<small style="color: var(--muted); display: block; margin-top: 4px;">Precio al cliente</small>
 				</div>
 			</div>
 			<div id="profit-preview"
 				style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-bottom: 15px; display: none;">
-				<div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+				<div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+					<span>Costo Total por unidad:</span>
+					<strong id="total-cost-amount" style="color: var(--text);">$0.00</strong>
+				</div>
+				<div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
 					<span>Ganancia por unidad:</span>
 					<strong id="profit-amount" style="color: var(--accent);">$0.00</strong>
 				</div>
@@ -1014,7 +1095,9 @@
 				globalUtils.formatCurrency = function (amount) {
 					return new Intl.NumberFormat('es-MX', {
 						style: 'currency',
-						currency: 'MXN'
+						currency: 'MXN',
+						minimumFractionDigits: 0,
+						maximumFractionDigits: 0
 					}).format(amount || 0);
 				};
 			}
@@ -1122,9 +1205,9 @@
 			const activeOrders = AppState.orders.filter(o => o.status === 'pending').length;
 			// Aquí podrías agregar un badge visual si quieres
 			if (activeOrders > 0) {
-				document.title = `(${activeOrders}) Admin - Sistema Restaurante`;
+				document.title = `(${activeOrders}) Admin - UMBRAL`;
 			} else {
-				document.title = 'Admin - Sistema Restaurante';
+				document.title = 'Admin - UMBRAL';
 			}
 		}
 
@@ -1519,8 +1602,11 @@
 		function renderFinanceSummary(transactions) {
 			const totals = calculateFinanceTotals(transactions);
 
-			// Calcular rentabilidad para las transacciones filtradas
+			// Calcular rentabilidad y desgloses de costos para las transacciones filtradas
 			let totalProfit = 0;
+			let totalProductionCost = 0;
+			let totalBoxCost = 0;
+
 			transactions.forEach(transaction => {
 				const amount = getTransactionSignedAmount(transaction);
 				// Solo considerar ventas positivas
@@ -1531,11 +1617,17 @@
 						order.items.forEach(item => {
 							const mId = item.menuItemId || item.itemId || item.id;
 							const menuItem = AppState.menuItems.find(m => m.id === mId);
-							const cost = menuItem?.cost || 0;
-							orderCost += cost * item.quantity;
+							const baseCost = menuItem?.cost || 0;
+							const prodCost = menuItem?.productionCost || 0;
+							const boxCost = menuItem?.boxCost || 0;
+
+							const itemTotalCost = (baseCost + prodCost + boxCost) * item.quantity;
+							orderCost += itemTotalCost;
+
+							totalProductionCost += prodCost * item.quantity;
+							totalBoxCost += boxCost * item.quantity;
 						});
 						// Profit = Venta - Costo
-						// Usamos el monto de la transacción para ser fieles a lo cobrado
 						totalProfit += (amount - orderCost);
 					}
 				}
@@ -1543,6 +1635,12 @@
 
 			const incomeEl = document.getElementById('finance-total-income');
 			if (incomeEl) incomeEl.textContent = Utils.formatCurrency(totals.income);
+
+			const prodCostEl = document.getElementById('finance-total-production-cost');
+			if (prodCostEl) prodCostEl.textContent = Utils.formatCurrency(totalProductionCost);
+
+			const boxCostEl = document.getElementById('finance-total-box-cost');
+			if (boxCostEl) boxCostEl.textContent = Utils.formatCurrency(totalBoxCost);
 
 			// Elemento de Rentabilidad (reemplaza a Gastos)
 			const profitEl = document.getElementById('finance-total-profit-summary');
@@ -1931,15 +2029,15 @@
 
 		// DASHBOARD
 		function renderDashboard() {
-			const activeOrders = AppState.orders.filter(o => o.status === 'pending');
+			const activeOrders = AppState.orders.filter(o => o.status === 'pending' || o.status === 'por_pagar');
 
 			// === AUTO-REPARAR MESAS INCONSISTENTES ===
-			// Si una mesa dice 'occupied' pero su pedido ya no es pending, liberarla
+			// Si una mesa dice 'occupied' pero su pedido ya no es activo, liberarla
 			AppState.tables.forEach(table => {
 				if (table.status === 'occupied' && table.currentOrder) {
 					const linkedOrder = AppState.orders.find(o => o.id === table.currentOrder);
-					if (!linkedOrder || linkedOrder.status !== 'pending') {
-						console.warn(`[Auto-fix] Mesa ${table.number}: currentOrder apunta a pedido inexistente o no-pending. Liberando mesa.`);
+					if (!linkedOrder || (linkedOrder.status !== 'pending' && linkedOrder.status !== 'por_pagar')) {
+						console.warn(`[Auto-fix] Mesa ${table.number}: currentOrder apunta a pedido inexistente o inactivo. Liberando mesa.`);
 						table.status = 'available';
 						table.currentOrder = null;
 						API.update('tables', table.id, table).catch(e => console.error('Error auto-fix mesa:', e));
@@ -2025,8 +2123,8 @@
 			});
 
 			container.innerHTML = allDisplayTables.map(table => {
-				const order = table.currentOrder ? AppState.orders.find(o => o.id === table.currentOrder && o.status === 'pending') : null;
-				// Solo mostrar como ocupada si hay pedido pendiente activo
+				const order = table.currentOrder ? AppState.orders.find(o => o.id === table.currentOrder && (o.status === 'pending' || o.status === 'por_pagar')) : null;
+				// Solo mostrar como ocupada si hay pedido activo
 				const actualStatus = (table.status === 'occupied' && !order) ? 'available' : table.status;
 
 				return `
@@ -2037,8 +2135,8 @@
 						<div class="table-status">
 							${renderStatusPill(actualStatus)}
 						</div>
-						${order ? `<div class="badge badge-warning" style="margin-top: 8px; font-size: 11px;">
-							${order.items.length} productos | ${Utils.formatCurrency(order.total)}
+						${order ? `<div class="badge ${order.status === 'por_pagar' ? '' : 'badge-warning'}" style="margin-top: 8px; font-size: 11px; ${order.status === 'por_pagar' ? 'background: #2196F3; color: #ffffff;' : ''}">
+							${order.status === 'por_pagar' ? 'Por Pagar | ' : ''}${order.items.length} productos | ${Utils.formatCurrency(order.total)}
 						</div>` : ''}
 						<div style="margin-top: 12px; display: flex; gap: 5px; flex-direction: column;">
 							${actualStatus === 'available' ?
@@ -2157,7 +2255,7 @@
 				// Cancelar el pedido asociado para que no quede huérfano
 				if (table.currentOrder) {
 					const order = AppState.orders.find(o => o.id === table.currentOrder);
-					if (order && order.status === 'pending') {
+					if (order && (order.status === 'pending' || order.status === 'por_pagar')) {
 						order.status = 'cancelled';
 						order.cancelledAt = new Date().toISOString();
 						await API.update('orders', order.id, order);
@@ -2176,7 +2274,7 @@
 		// PEDIDOS
 		function renderOrders() {
 			const container = document.getElementById('orders-list');
-			const activeOrders = AppState.orders.filter(o => o.status === 'pending');
+			const activeOrders = AppState.orders.filter(o => o.status === 'pending' || o.status === 'por_pagar');
 
 			// Auto-reparar: si un pedido pendiente tiene tableId pero la mesa no lo referencia, re-vincular
 			const referencedOrderIds = new Set(AppState.tables.map(t => t.currentOrder).filter(Boolean));
@@ -2212,15 +2310,20 @@
 				const orphanWarning = !isLinkedToTable && !order.isTakeaway ?
 					'<span class="badge badge-danger" style="font-size: 10px; margin-left: 8px;">⚠️ Sin mesa vinculada</span>' : '';
 
+				const isPorPagar = order.status === 'por_pagar';
+				const statusBadge = isPorPagar ?
+					'<span class="badge" style="background: #2196F3; color: #ffffff; font-weight: 700; padding: 4px 10px; border-radius: 4px;">Por Pagar</span>' :
+					'<span class="badge badge-warning">Pendiente</span>';
+
 				return `
-				<div class="order-card">
+				<div class="order-card" style="${isPorPagar ? 'border-left: 5px solid #2196F3;' : ''}">
 					<div class="order-header">
 						<div>
 							<strong style="color: var(--accent);">Mesa ${order.tableNumber}</strong>${orphanWarning}
 							<div class="small">${Utils.formatDate(order.createdAt)}</div>
 						</div>
 						<div>
-							<span class="badge badge-warning">Pendiente</span>
+							${statusBadge}
 						</div>
 					</div>
 					<div class="order-items-list">
@@ -2234,13 +2337,40 @@
 					<div style="text-align: right; font-size: 20px; font-weight: 700; color: var(--success); margin-top: 10px;">
 						Total: ${Utils.formatCurrency(order.total)}
 					</div>
-					<div style="margin-top: 15px; display: flex; gap: 10px;">
+					<div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+						<button class="btn" style="background: #2196F3; color: #ffffff;" onclick="printOrderTicket('${order.id}')"><span class="icon-dot icon-dot--info"></span><span>Imprimir Ticket</span></button>
 						<button class="btn btn-success" onclick="completeOrder('${order.id}')"><span class="icon-dot icon-dot--success"></span><span>Completar y Facturar</span></button>
 						<button class="btn btn-danger" onclick="cancelOrder('${order.id}')"><span class="icon-dot icon-dot--danger"></span><span>Cancelar</span></button>
 					</div>
 				</div>
 			`;
 			}).join('');
+		}
+
+		async function printOrderTicket(orderId) {
+			const order = AppState.orders.find(o => o.id === orderId);
+			if (!order) {
+				Utils.showNotification('Pedido no encontrado', 'error');
+				return;
+			}
+
+			try {
+				if (order.status === 'pending') {
+					order.status = 'por_pagar';
+					order.printedAt = new Date().toISOString();
+					await API.update('orders', order.id, order);
+				}
+
+				await generateInvoicePDF(order);
+
+				renderOrders();
+				renderDashboard();
+				renderTables();
+				Utils.showNotification('Ticket generado - Marcado como Por Pagar', 'success');
+			} catch (error) {
+				console.error('Error imprimiendo ticket:', error);
+				Utils.showNotification('Error al generar ticket', 'error');
+			}
 		}
 
 		let isCompletingOrder = false;
@@ -2495,7 +2625,10 @@
 			const tbody = document.querySelector('#menu-table tbody');
 			tbody.innerHTML = AppState.menuItems.map(item => {
 				const cost = item.cost || 0;
-				const profit = item.price - cost;
+				const productionCost = item.productionCost || 0;
+				const boxCost = item.boxCost || 0;
+				const totalCost = cost + productionCost + boxCost;
+				const profit = item.price - totalCost;
 				const margin = item.price > 0 ? ((profit / item.price) * 100).toFixed(1) : 0;
 				return `
 					<tr>
@@ -2508,6 +2641,9 @@
 						<td style="max-width: 200px; color: var(--muted); font-size: 13px;">${item.description || '-'}</td>
 						<td><span class="badge badge-info">${item.category}</span></td>
 						<td>${Utils.formatCurrency(cost)}</td>
+						<td style="color: #ff9800;">${Utils.formatCurrency(productionCost)}</td>
+						<td style="color: #00bcd4;">${Utils.formatCurrency(boxCost)}</td>
+						<td><strong>${Utils.formatCurrency(totalCost)}</strong></td>
 						<td><strong>${Utils.formatCurrency(item.price)}</strong></td>
 						<td style="color: ${profit > 0 ? 'var(--accent)' : '#999'}; font-weight: 600;">${Utils.formatCurrency(profit)}</td>
 						<td>
@@ -2542,6 +2678,8 @@
 				document.getElementById('item-description').value = currentEditingMenuItem.description || '';
 				document.getElementById('item-category').value = currentEditingMenuItem.category;
 				document.getElementById('item-cost').value = currentEditingMenuItem.cost || 0;
+				document.getElementById('item-production-cost').value = currentEditingMenuItem.productionCost || 0;
+				document.getElementById('item-box-cost').value = currentEditingMenuItem.boxCost || 0;
 				document.getElementById('item-price').value = currentEditingMenuItem.price;
 				document.getElementById('item-available').checked = currentEditingMenuItem.available;
 				document.getElementById('item-image').value = currentEditingMenuItem.image || '';
@@ -2558,6 +2696,8 @@
 				document.getElementById('item-description').value = '';
 				document.getElementById('item-category').value = '';
 				document.getElementById('item-cost').value = '0';
+				document.getElementById('item-production-cost').value = '0';
+				document.getElementById('item-box-cost').value = '0';
 				document.getElementById('item-price').value = '';
 				document.getElementById('item-available').checked = true;
 				document.getElementById('item-image').value = '';
@@ -2610,10 +2750,18 @@
 
 		function updateProfitPreview() {
 			const cost = parseFloat(document.getElementById('item-cost').value) || 0;
+			const productionCost = parseFloat(document.getElementById('item-production-cost').value) || 0;
+			const boxCost = parseFloat(document.getElementById('item-box-cost').value) || 0;
 			const price = parseFloat(document.getElementById('item-price').value) || 0;
+			const totalCost = cost + productionCost + boxCost;
 
-			if (price > 0 && cost >= 0) {
-				const profit = price - cost;
+			const totalCostElement = document.getElementById('total-cost-amount');
+			if (totalCostElement) {
+				totalCostElement.textContent = Utils.formatCurrency(totalCost);
+			}
+
+			if (price > 0 && totalCost >= 0) {
+				const profit = price - totalCost;
 				const margin = ((profit / price) * 100).toFixed(1);
 
 				document.getElementById('profit-amount').textContent = Utils.formatCurrency(profit);
@@ -2629,6 +2777,8 @@
 			const description = document.getElementById('item-description').value.trim();
 			const category = document.getElementById('item-category').value.trim();
 			const cost = parseFloat(document.getElementById('item-cost').value) || 0;
+			const productionCost = parseFloat(document.getElementById('item-production-cost').value) || 0;
+			const boxCost = parseFloat(document.getElementById('item-box-cost').value) || 0;
 			const price = parseFloat(document.getElementById('item-price').value);
 			const available = document.getElementById('item-available').checked;
 			const image = document.getElementById('item-image').value.trim();
@@ -2643,6 +2793,8 @@
 				currentEditingMenuItem.description = description;
 				currentEditingMenuItem.category = category;
 				currentEditingMenuItem.cost = cost;
+				currentEditingMenuItem.productionCost = productionCost;
+				currentEditingMenuItem.boxCost = boxCost;
 				currentEditingMenuItem.price = price;
 				currentEditingMenuItem.available = available;
 				currentEditingMenuItem.image = image;
@@ -2654,6 +2806,8 @@
 				description,
 				category,
 				cost,
+				productionCost,
+				boxCost,
 				price,
 				available,
 				image
@@ -2998,6 +3152,11 @@
 
 			document.getElementById('table-detail-title').textContent = `Mesa ${table.number} - Detalle`;
 
+			const isPorPagar = order.status === 'por_pagar';
+			const statusBadgeHtml = isPorPagar ?
+				'<span class="badge" style="background: #2196F3; color: #ffffff; font-weight: 700; padding: 4px 10px; border-radius: 4px;">Por Pagar</span>' :
+				'<span class="badge badge-warning">Activo</span>';
+
 			const content = document.getElementById('table-detail-content');
 			content.innerHTML = `
 				<div style="margin-bottom: 20px;">
@@ -3006,7 +3165,7 @@
 							<strong style="color: var(--accent); font-size: 18px;">Mesa ${table.number}</strong>
 							<div class="small" style="color: var(--muted);">${Utils.formatDate(order.createdAt)}</div>
 						</div>
-						<span class="badge badge-warning">Activo</span>
+						${statusBadgeHtml}
 					</div>
 					
 					<div class="order-items-list" style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
@@ -3032,7 +3191,7 @@
 					</div>
 					
 					<div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
-						<button class="btn btn-warning" onclick="generateInvoicePDFFromModal('${order.id}')"><span class="icon-dot icon-dot--warning"></span><span>Generar PDF</span></button>
+						<button class="btn" style="background: #2196F3; color: #ffffff;" onclick="printOrderTicketFromModal('${order.id}')"><span class="icon-dot icon-dot--info"></span><span>Imprimir Ticket</span></button>
 						<button class="btn btn-success" onclick="completeOrderFromModal('${order.id}')"><span class="icon-dot icon-dot--success"></span><span>Completar y Facturar</span></button>
 						<button class="btn btn-secondary" onclick="closeTableDetailModal()">Cerrar</button>
 					</div>
@@ -3046,11 +3205,15 @@
 			document.getElementById('table-detail-modal').classList.remove('show');
 		}
 
+		async function printOrderTicketFromModal(orderId) {
+			closeTableDetailModal();
+			await printOrderTicket(orderId);
+		}
+
 		async function generateInvoicePDFFromModal(orderId) {
 			const order = AppState.orders.find(o => o.id === orderId);
 			if (order) {
-				await generateInvoicePDF(order);
-				Utils.showNotification('PDF generado', 'success');
+				await printOrderTicket(orderId);
 			}
 		}
 
@@ -3282,7 +3445,7 @@
 			doc.setFontSize(8);
 			order.items.forEach(item => {
 				doc.text(`${item.quantity}x ${item.name}`, 5, y);
-				doc.text(`$${(item.price * item.quantity).toFixed(2)}`, 70, y, { align: 'right' });
+				doc.text(`${Utils.formatCurrency(item.price * item.quantity)}`, 70, y, { align: 'right' });
 				y += 5;
 				if (item.notes) {
 					doc.setFontSize(7);
@@ -3295,7 +3458,7 @@
 			doc.text('------------------------', 40, y, { align: 'center' });
 			y += 5;
 			doc.setFontSize(12);
-			doc.text(`TOTAL: $${order.total.toFixed(2)}`, 40, y, { align: 'center' });
+			doc.text(`TOTAL: ${Utils.formatCurrency(order.total)}`, 40, y, { align: 'center' });
 			y += 7;
 			doc.setFontSize(8);
 			doc.text('Gracias por su preferencia', 40, y, { align: 'center' });
@@ -3391,13 +3554,15 @@
 				warningDiv.style.display = 'none';
 			}
 
-			// Usar transacciones como fuente de verdad (consistente con Finanzas y Dashboard)
-			const completedOrders = AppState.orders.filter(o => o.status === 'completed');
+			// Filtrar ventas para incluir únicamente las ventas del MES ACTUAL
+			const thisMonth = Utils.getMonthKey();
+			const completedOrders = AppState.orders.filter(o => o.status === 'completed' && Utils.getMonthKeyFromISO(o.completedAt) === thisMonth);
 			const ordersById = new Map(completedOrders.map(order => [order.id, order]));
 
-			// Obtener todas las transacciones de venta con monto positivo
+			// Obtener todas las transacciones de venta del MES ACTUAL con monto positivo
 			const saleTransactions = AppState.transactions.filter(transaction => {
 				if (!transaction?.date) return false;
+				if (Utils.getMonthKeyFromISO(transaction.date) !== thisMonth) return false;
 				const amount = getTransactionSignedAmount(transaction);
 				return amount > 0; // Solo ingresos positivos
 			});
@@ -3418,8 +3583,11 @@
 				return transaction?.date || order.completedAt;
 			};
 
-			// Calcular ventas por producto
+			// Calcular ventas por producto y costos acumulados
 			const productSales = {};
+			let totalBaseCostOverall = 0;
+			let totalProductionCostOverall = 0;
+			let totalBoxCostOverall = 0;
 
 			reportOrders.forEach(order => {
 				order.items.forEach(item => {
@@ -3428,22 +3596,65 @@
 						productSales[item.menuItemId] = {
 							name: item.name,
 							cost: menuItem?.cost || 0,
+							productionCost: menuItem?.productionCost || 0,
+							boxCost: menuItem?.boxCost || 0,
 							price: item.price,
 							quantity: 0,
 							totalSales: 0,
+							totalBaseCost: 0,
+							totalProductionCost: 0,
+							totalBoxCost: 0,
 							totalCost: 0,
 							category: menuItem?.category || 'Sin Categoría'
 						};
 					}
-					productSales[item.menuItemId].quantity += item.quantity;
-					productSales[item.menuItemId].totalSales += item.price * item.quantity;
-					productSales[item.menuItemId].totalCost += (productSales[item.menuItemId].cost * item.quantity);
+					const p = productSales[item.menuItemId];
+					p.quantity += item.quantity;
+					p.totalSales += item.price * item.quantity;
+
+					const baseCostItem = (p.cost || 0) * item.quantity;
+					const prodCostItem = (p.productionCost || 0) * item.quantity;
+					const boxCostItem = (p.boxCost || 0) * item.quantity;
+
+					p.totalBaseCost += baseCostItem;
+					p.totalProductionCost += prodCostItem;
+					p.totalBoxCost += boxCostItem;
+					p.totalCost += (baseCostItem + prodCostItem + boxCostItem);
+
+					totalBaseCostOverall += baseCostItem;
+					totalProductionCostOverall += prodCostItem;
+					totalBoxCostOverall += boxCostItem;
 				});
 			});
 
+			// Actualizar tarjetas de Resumen General de Costos (Base, Producción y Cajas)
+			const totalCombinedCost = totalBaseCostOverall + totalProductionCostOverall + totalBoxCostOverall;
+			const elemBase = document.getElementById('cost-total-base');
+			if (elemBase) elemBase.textContent = Utils.formatCurrency(totalBaseCostOverall);
+
+			const elemProd = document.getElementById('cost-total-production');
+			if (elemProd) elemProd.textContent = Utils.formatCurrency(totalProductionCostOverall);
+
+			const elemBox = document.getElementById('cost-total-box');
+			if (elemBox) elemBox.textContent = Utils.formatCurrency(totalBoxCostOverall);
+
+			const elemCombined = document.getElementById('cost-total-combined');
+			if (elemCombined) elemCombined.textContent = Utils.formatCurrency(totalCombinedCost);
+
+			const elemRatio = document.getElementById('cost-ratio-display');
+			if (elemRatio) {
+				if (totalCombinedCost > 0) {
+					const basePct = ((totalBaseCostOverall / totalCombinedCost) * 100).toFixed(1);
+					const prodPct = ((totalProductionCostOverall / totalCombinedCost) * 100).toFixed(1);
+					const boxPct = ((totalBoxCostOverall / totalCombinedCost) * 100).toFixed(1);
+					elemRatio.textContent = `Base ${basePct}% | Prod ${prodPct}% | Cajas ${boxPct}%`;
+				} else {
+					elemRatio.textContent = `Base 0% | Prod 0% | Cajas 0%`;
+				}
+			}
+
 			// === MÉTRICAS PRINCIPALES ===
 			const today = Utils.getDateKey();
-			const thisMonth = Utils.getMonthKey();
 
 			// Fecha original del cálculo del mes fue removida para calcular estrictamente el mes actual
 
@@ -3482,8 +3693,10 @@
 						let orderCost = 0;
 						order.items.forEach(item => {
 							const menuItem = AppState.menuItems.find(m => m.id === item.menuItemId);
-							const cost = menuItem?.cost || 0;
-							orderCost += cost * item.quantity;
+							const baseCost = menuItem?.cost || 0;
+							const prodCost = menuItem?.productionCost || 0;
+							const boxCost = menuItem?.boxCost || 0;
+							orderCost += (baseCost + prodCost + boxCost) * item.quantity;
 						});
 
 						// Ganancia = monto de la transacción - costo de productos
@@ -3817,7 +4030,7 @@
 				.map(product => {
 					const totalProfit = product.totalSales - product.totalCost;
 					const margin = product.totalSales > 0 ? ((totalProfit / product.totalSales) * 100).toFixed(1) : 0;
-					const noCostConfigured = product.cost === 0;
+					const noCostConfigured = (product.cost === 0 && product.productionCost === 0 && (product.boxCost === 0 || !product.boxCost));
 
 					return `
 						<tr>
@@ -3826,12 +4039,15 @@
 								${noCostConfigured ? '<br><small style="color: #ff9800; display: inline-flex; align-items: center; gap: 6px;"><span class="icon-dot icon-dot--warning" style="width: 8px; height: 8px; box-shadow: none;"></span><span>Sin costo configurado</span></small>' : ''}
 							</td>
 							<td>${product.quantity}</td>
+							<td>${Utils.formatCurrency(product.totalBaseCost || 0)}</td>
+							<td style="color: #ff9800;">${Utils.formatCurrency(product.totalProductionCost || 0)}</td>
+							<td style="color: #00bcd4;">${Utils.formatCurrency(product.totalBoxCost || 0)}</td>
 							<td>
-								${Utils.formatCurrency(product.totalCost)}
+								<strong>${Utils.formatCurrency(product.totalCost)}</strong>
 								${noCostConfigured ? '<br><small style="color: #999;">Configure en Menú</small>' : ''}
 							</td>
 							<td>${Utils.formatCurrency(product.totalSales)}</td>
-							<td style="color: ${totalProfit > 0 ? 'var(--accent)' : '#999'}; font-weight: 700;">
+							<td style="color: ${totalProfit > 0 ? 'var(--accent)' : '#999'}; font-weight: 600;">
 								${Utils.formatCurrency(totalProfit)}
 								${noCostConfigured ? '<br><small style="color: #ff9800;">Aproximado</small>' : ''}
 							</td>
@@ -3845,7 +4061,7 @@
 				}).join('');
 
 			if (products.length === 0) {
-				tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--muted); padding: 40px;">No hay datos de ventas para calcular rentabilidad</td></tr>';
+				tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--muted); padding: 40px;">No hay datos de ventas para calcular rentabilidad</td></tr>';
 			}
 		}
 
@@ -3886,7 +4102,7 @@
 
 		// MANTENIMIENTO: Limpiar pedidos que quedaron pendientes por el bug anterior
 		async function cleanupPendingOrders() {
-			const pendingOrders = AppState.orders.filter(o => o.status === 'pending');
+			const pendingOrders = AppState.orders.filter(o => o.status === 'pending' || o.status === 'por_pagar');
 			if (pendingOrders.length === 0) {
 				alert('No hay pedidos pendientes para limpiar.');
 				return;
@@ -3935,7 +4151,7 @@
 				const a = document.createElement('a');
 				const date = Utils.getDateKey().replace(/-/g, '');
 				a.href = url;
-				a.download = `kocina_oculta_backup_${date}.json`;
+				a.download = `umbral_backup_${date}.json`;
 				document.body.appendChild(a);
 				a.click();
 				document.body.removeChild(a);

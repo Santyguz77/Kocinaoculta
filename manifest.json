@@ -1,7 +1,7 @@
 {
-  "name": "Sistema Restaurante",
-  "short_name": "Restaurante",
-  "description": "Sistema de gestión para restaurante - Pedidos, menú y finanzas",
+  "name": "UMBRAL Gastrobar",
+  "short_name": "UMBRAL",
+  "description": "Sistema de gestión UMBRAL Gastrobar - Pedidos, menú y finanzas",
   "start_url": "/index.html",
   "scope": "/",
   "display": "standalone",

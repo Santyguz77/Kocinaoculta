@@ -35,7 +35,7 @@ SOLUCIÓN - Ejecuta estos comandos en tu VPS (Kali Linux):
    pm2 logs cloudflare-tunnel_restaurante
 
 8️⃣ VERIFICAR QUE EL TÚNEL FUNCIONE:
-   Abre en navegador: https://merchants-gossip-regarded-actor.trycloudflare.com
+   Abre en navegador: https://climbing-previous-partner-gradually.trycloudflare.com
    Debería mostrar: "🍽️ Servidor de Restaurante funcionando correctamente"
 
 =======================================================
