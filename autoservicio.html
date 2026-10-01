@@ -494,12 +494,7 @@
 		}
 
 		function renderCategoryTabs() {
-			const categories = [...new Set(AppState.menuItems.map(item => item.category))];
-			categories.sort((a, b) => {
-				if (a.toLowerCase() === 'hamburguesas') return -1;
-				if (b.toLowerCase() === 'hamburguesas') return 1;
-				return a.localeCompare(b);
-			});
+			const categories = Utils.sortCategories([...new Set(AppState.menuItems.map(item => item.category).filter(Boolean))]);
 			const container = document.getElementById('category-tabs');
 
 			container.innerHTML = `
@@ -507,7 +502,7 @@
 					Todos
 				</button>
 				${categories.map(cat => `
-					<button class="category-tab ${currentCategory === cat ? 'active' : ''}" onclick="filterCategory('${cat}')">
+					<button class="category-tab ${currentCategory === cat ? 'active' : ''}" onclick="filterCategory('${cat.replace(/'/g, "\\'")}')">
 						${cat}
 					</button>
 				`).join('')}
@@ -522,9 +517,10 @@
 
 		function renderMenuItems() {
 			const container = document.getElementById('menu-items');
+			const sorted = Utils.sortMenuItems(AppState.menuItems);
 			const items = currentCategory === 'all'
-				? AppState.menuItems
-				: AppState.menuItems.filter(item => item.category === currentCategory);
+				? sorted
+				: sorted.filter(item => item.category === currentCategory);
 
 			const availableItems = items.filter(item => item.available !== false);
 

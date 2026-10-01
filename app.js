@@ -169,6 +169,51 @@ const Utils = {
 		if (type === 'error') {
 			alert(message);
 		}
+	},
+
+	CATEGORY_ORDER: [
+		'ENTRADAS',
+		'MORDISCOS',
+		'HAMBURGUESAS',
+		'PERROS',
+		'DESGRANADOS',
+		'NACHOS',
+		'PAPAS',
+		'FUERTES',
+		'SODAS ITALIANAS',
+		'LIMONADAS NATURALES',
+		'GASEOSAS',
+		'CERVEZAS',
+		'BEBIDAS REFRESCANTES',
+		'BEBIDAS',
+		'POSTRES',
+		'OTROS'
+	],
+
+	getCategoryPriority(category) {
+		if (!category) return 999;
+		const upper = String(category).trim().toUpperCase();
+		const idx = Utils.CATEGORY_ORDER.findIndex(cat => upper === cat || upper.includes(cat) || cat.includes(upper));
+		return idx !== -1 ? idx : 900;
+	},
+
+	sortCategories(categories) {
+		return [...categories].sort((a, b) => {
+			const prioA = Utils.getCategoryPriority(a);
+			const prioB = Utils.getCategoryPriority(b);
+			if (prioA !== prioB) return prioA - prioB;
+			return String(a).localeCompare(String(b));
+		});
+	},
+
+	sortMenuItems(items) {
+		if (!Array.isArray(items)) return [];
+		return [...items].sort((a, b) => {
+			const prioA = Utils.getCategoryPriority(a.category);
+			const prioB = Utils.getCategoryPriority(b.category);
+			if (prioA !== prioB) return prioA - prioB;
+			return String(a.name || '').localeCompare(String(b.name || ''));
+		});
 	}
 };
 
@@ -224,39 +269,76 @@ async function loadInitialData() {
 	}
 }
 
+// Datos oficiales de la carta UMBRAL GASTROBAR
+const UMBRAL_DEFAULT_MENU = [
+	// ENTRADAS
+	{ name: 'Chorizo en reducción de panela', category: 'ENTRADAS', price: 16000, cost: 6000, description: 'Chorizo artesanal bañado en reducción de panela', available: true },
+	{ name: 'Snack de pollo crocante', category: 'ENTRADAS', price: 16000, cost: 6000, description: 'Snack de pollo crocante, papas francesa y mayo de ajo trufada', available: true },
+	{ name: 'Patacones', category: 'ENTRADAS', price: 12000, cost: 4000, description: 'Acompañados de hogao y suero costeño', available: true },
+
+	// HAMBURGUESAS
+	{ name: 'UMBRAL', category: 'HAMBURGUESAS', price: 29000, cost: 10000, description: 'Pan de sémola sellado en mantequilla, mayo de ajo trufada, 140 gr de carne de res a la parrilla, queso gouda, panceta cubierta en glaseado de Jack Daniels, yuca crocante, vegetales frescos y papas a la francesa', available: true },
+	{ name: 'TITAN', category: 'HAMBURGUESAS', price: 28000, cost: 9500, description: 'Pan de sémola sellado en mantequilla, 140 gr de carne de res a la parrilla, queso mozzarella, tocineta caramelizada, carne mechada, yuca crispí, vegetales frescos y papas a la francesa', available: true },
+	{ name: 'CHAMPIONS', category: 'HAMBURGUESAS', price: 28000, cost: 9500, description: 'Pan de sémola sellado en mantequilla, 140 gr carne de res a la parrilla cubierta en chimichurri, queso mozzarella, tocineta, queso mozzarella apanado, mermelada de tomate, vegetales frescos y papas a la francesa', available: true },
+	{ name: 'TENTACION', category: 'HAMBURGUESAS', price: 28000, cost: 9500, description: 'Pan de sémola sellado en mantequilla, 140 gr carne de res, tocineta, queso fundido con maíz tierno, chorizo artesanal, vegetales frescos y papas a la francesa', available: true },
+	{ name: 'ESTRELLA', category: 'HAMBURGUESAS', price: 26500, cost: 9000, description: 'Pan de sémola sellado en mantequilla, 140 gr carne de res a la parrilla, queso gouda, tocineta, pollo en tártara, cebolla caramelizada, vegetales frescos y papas a la francesa', available: true },
+	{ name: 'CLASICA', category: 'HAMBURGUESAS', price: 20000, cost: 7000, description: 'Pan de sémola sellado en mantequilla, 140 gr carne de res, tocineta, queso gouda, vegetales frescos y papas a la francesa', available: true },
+
+	// PERROS
+	{ name: 'MONSTER', category: 'PERROS', price: 24500, cost: 8000, description: 'Pan brioche, salchicha americana, piña caramelizada, tocineta, carne mechada, queso mozzarella y papas a la francesa', available: true },
+	{ name: 'CALLEJERO', category: 'PERROS', price: 23500, cost: 7500, description: 'Pan brioche, queso mozzarella, salchicha americana, pollo en tártara, tocineta crispí y papas a la francesa', available: true },
+
+	// DESGRANADOS
+	{ name: 'DESGRANADO MIXTO', category: 'DESGRANADOS', price: 26000, cost: 8500, description: 'Pollo mechado, maíz tierno, carne mechada, crema de leche, hogao, queso mozzarella, tocineta y papas a la francesa', available: true },
+
+	// NACHOS
+	{ name: 'NACHOS MIXTOS', category: 'NACHOS', price: 28000, cost: 9000, description: 'Nachos crocantes, generosa porción de carne y pollo mechados, queso mozzarella y pico de gallo picante', available: true },
+
+	// PAPAS
+	{ name: 'PAPAS DE CERDO', category: 'PAPAS', price: 26000, cost: 8500, description: 'Pork belly laqueado en salsa BBQ Jack Daniels, tocineta crocante con mayo de ajo trufada y papas a la francesa', available: true },
+	{ name: 'PAPAS DE POLLO', category: 'PAPAS', price: 24000, cost: 8000, description: 'Chicken tenders en bechamel, tocineta crocante, queso mozzarella fundido, papas a la francesa y tostada de parmesano', available: true },
+	{ name: 'PAPAS CLASICAS', category: 'PAPAS', price: 20000, cost: 6500, description: 'Papas francesas bañadas en queso mozzarella, triple tocineta crocante y salchicha', available: true },
+
+	// FUERTES
+	{ name: 'SALTEADO DE RES', category: 'FUERTES', price: 35000, cost: 12000, description: 'Lomo de res salteado al estilo umbral (salsa de ostras, vino tinto y soja) con papas a la francesa', available: true },
+	{ name: 'PICAÑA', category: 'FUERTES', price: 38000, cost: 14000, description: 'Corte de res a la parrilla, medallón de mantequilla trabajada, papas a la francesa y ensalada fresca', available: true },
+	{ name: 'BIFE DE RES', category: 'FUERTES', price: 38000, cost: 14000, description: 'Corte de res parrillado con chimichurri argentino, papas a la francesa y ensalada fresca', available: true },
+	{ name: 'SUPREMA DE POLLO', category: 'FUERTES', price: 32000, cost: 11000, description: 'Pollo parrillado gratinado en espejo de salsa cremosa de pollo y mollejas tostadas, papas a la francesa y ensalada', available: true },
+	{ name: 'ALAS CROCANTES', category: 'FUERTES', price: 26000, cost: 8500, description: '8 piezas de alas apanadas muy crocantes con salsa a elección (BBQ Jack Daniels, BBQ Picante o Mielmostaza), papas a la francesa y ensalada', available: true },
+	{ name: 'CEVICHE DE CHICHARRON', category: 'FUERTES', price: 28000, cost: 9500, description: 'Chicharron crujiente con cebolla morada, pimentón, mango, cilantro y tostones de plátano verde', available: true },
+	{ name: 'ENSALADA', category: 'FUERTES', price: 28000, cost: 9000, description: 'Lechuga fresca, mix de quesos (mozzarella, costeño frito, parmesano), pollo en mostaza Dijon, crutones, tomates Cherry, vinagreta mielmostaza, reducción balsámica y tostones', available: true },
+
+	// SODAS ITALIANAS
+	{ name: 'Soda Italiana Arándanos', category: 'SODAS ITALIANAS', price: 15000, cost: 4000, description: 'Soda refrescante sabor Arándanos', available: true },
+	{ name: 'Soda Italiana Kiwi', category: 'SODAS ITALIANAS', price: 12000, cost: 3500, description: 'Soda refrescante sabor Kiwi', available: true },
+	{ name: 'Soda Italiana Lulo', category: 'SODAS ITALIANAS', price: 12000, cost: 3500, description: 'Soda refrescante sabor Lulo', available: true },
+
+	// LIMONADAS NATURALES
+	{ name: 'Limonada Cerezada', category: 'LIMONADAS NATURALES', price: 11000, cost: 3000, description: 'Limonada natural con infusión de cereza', available: true },
+	{ name: 'Limonada Hierbabuenal', category: 'LIMONADAS NATURALES', price: 9000, cost: 2500, description: 'Limonada natural con hierbabuena fresca', available: true },
+	{ name: 'Limonada Natural', category: 'LIMONADAS NATURALES', price: 8000, cost: 2000, description: 'Limonada 100% natural', available: true },
+
+	// GASEOSAS
+	{ name: 'Coca-Cola 400 ml', category: 'GASEOSAS', price: 5000, cost: 2500, description: 'Gaseosa Coca-Cola 400 ml', available: true },
+	{ name: 'Coca-Cola Zero 400 ml', category: 'GASEOSAS', price: 5000, cost: 2500, description: 'Gaseosa Coca-Cola Zero 400 ml', available: true },
+	{ name: 'Ginger 300 ml', category: 'GASEOSAS', price: 5000, cost: 2500, description: 'Ginger Ale 300 ml', available: true },
+	{ name: 'Soda 300 ml', category: 'GASEOSAS', price: 5000, cost: 2500, description: 'Soda de agua carbonatada 300 ml', available: true },
+	{ name: 'Agua', category: 'GASEOSAS', price: 3000, cost: 1200, description: 'Agua embotellada', available: true },
+
+	// CERVEZAS
+	{ name: 'Stella Artois', category: 'CERVEZAS', price: 10000, cost: 5000, description: 'Cerveza Stella Artois', available: true },
+	{ name: 'Club Colombia Dorada', category: 'CERVEZAS', price: 8000, cost: 4000, description: 'Cerveza Club Colombia Dorada', available: true }
+];
+
 // Inicializar datos de ejemplo SOLO si el servidor confirma que están vacíos
 async function initializeDefaultData() {
-	// Verificar si realmente necesitamos inicializar (solo si las tablas críticas están vacías)
 	if (AppState.menuItems.length === 0) {
-		AppState.menuItems = [
-			{
-				id: Utils.generateId(),
-				name: 'Hamburguesa Clásica',
-				description: 'Carne de res, lechuga, tomate, queso',
-				cost: 21000,
-				price: 30000,
-				category: 'Hamburguesas',
-				available: true
-			},
-			{
-				id: Utils.generateId(),
-				name: 'Pizza Margarita',
-				description: 'Tomate, mozzarella, albahaca',
-				cost: 0,
-				price: 25000,
-				category: 'Pizzas',
-				available: true
-			},
-			{
-				id: Utils.generateId(),
-				name: 'Ensalada César',
-				description: 'Lechuga romana, pollo, crutones, parmesano',
-				cost: 0,
-				price: 12000,
-				category: 'Ensaladas',
-				available: true
-			}
-		];
+		AppState.menuItems = UMBRAL_DEFAULT_MENU.map(item => ({
+			id: Utils.generateId(),
+			productionCost: 0,
+			boxCost: 0,
+			...item
+		}));
 		await API.save('menu_items', AppState.menuItems);
 	} else {
 		// Migración: Añadir campo cost a productos existentes que no lo tengan

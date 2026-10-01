@@ -376,13 +376,23 @@
 							class="icon-dot icon-dot--success"></span><span>Nuevo Producto</span></button>
 				</div>
 				<div class="card">
+					<div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px; align-items: center;">
+						<div style="flex: 1; min-width: 220px;">
+							<input type="text" id="menu-config-search" placeholder="🔍 Buscar plato por nombre, ingrediente o categoría..." oninput="renderMenuConfig()" style="width: 100%; padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.3); color: var(--text);">
+						</div>
+						<div style="width: 240px;">
+							<select id="menu-config-cat-filter" onchange="renderMenuConfig()" style="width: 100%; padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.3); color: var(--text);">
+								<option value="all">Todas las categorías</option>
+							</select>
+						</div>
+					</div>
 					<div class="table-scroll">
 						<table id="menu-table">
 							<thead>
 								<tr>
 									<th>Nombre</th>
 									<th>Descripción</th>
-									<th>Categoría</th>
+									<th>Tipo / Categoría</th>
 									<th>Costo Base</th>
 									<th>Costo Prod.</th>
 									<th>Costo Caja</th>
@@ -887,7 +897,20 @@
 			</div>
 			<div class="form-group">
 				<label>Categoría</label>
-				<input type="text" id="item-category" placeholder="Ej: Hamburguesas">
+				<input type="text" id="item-category" placeholder="Ej: HAMBURGUESAS" list="category-suggestions">
+				<datalist id="category-suggestions">
+					<option value="ENTRADAS"></option>
+					<option value="HAMBURGUESAS"></option>
+					<option value="PERROS"></option>
+					<option value="DESGRANADOS"></option>
+					<option value="NACHOS"></option>
+					<option value="PAPAS"></option>
+					<option value="FUERTES"></option>
+					<option value="SODAS ITALIANAS"></option>
+					<option value="LIMONADAS NATURALES"></option>
+					<option value="GASEOSAS"></option>
+					<option value="CERVEZAS"></option>
+				</datalist>
 			</div>
 			<div class="form-row" style="display: flex; gap: 10px; flex-wrap: wrap;">
 				<div class="form-group" style="flex: 1; min-width: 120px;">
@@ -971,9 +994,13 @@
 
 			<div style="display: grid; grid-template-columns: 1fr 400px; gap: 20px;">
 				<!-- Menú de productos -->
-				<div style="max-height: 500px; overflow-y: auto; padding-right: 10px;">
-					<h4 class="heading-with-icon" style="color: var(--accent); margin-bottom: 15px;"><span
-							class="icon-dot icon-dot--info"></span><span>Seleccionar Productos</span></h4>
+				<div style="max-height: 580px; overflow-y: auto; padding-right: 10px;">
+					<div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+						<h4 class="heading-with-icon" style="color: var(--accent); margin: 0;"><span
+								class="icon-dot icon-dot--info"></span><span>Seleccionar Productos (por Tipo de Plato)</span></h4>
+						<input type="text" id="order-menu-search" placeholder="🔍 Buscar plato o ingrediente..." oninput="renderOrderModalMenu()" style="padding: 8px 14px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.4); color: #fff; font-size: 13px; width: 220px;">
+					</div>
+					<div id="order-category-filters" style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 15px;"></div>
 					<div id="order-menu-items"></div>
 				</div>
 
@@ -2623,7 +2650,40 @@
 		}		// MENÚ CONFIG
 		function renderMenuConfig() {
 			const tbody = document.querySelector('#menu-table tbody');
-			tbody.innerHTML = AppState.menuItems.map(item => {
+			if (!tbody) return;
+
+			// Sort items strictly by dish type priority & name
+			const sortedItems = Utils.sortMenuItems(AppState.menuItems);
+
+			// Populate category dropdown filter if available
+			const catFilterSelect = document.getElementById('menu-config-cat-filter');
+			if (catFilterSelect) {
+				const currentSelection = catFilterSelect.value || 'all';
+				const availableCategories = Utils.sortCategories([...new Set(AppState.menuItems.map(i => i.category).filter(Boolean))]);
+				catFilterSelect.innerHTML = `<option value="all">Todas las categorías (${AppState.menuItems.length})</option>` +
+					availableCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+				catFilterSelect.value = currentSelection;
+			}
+
+			// Filter items by category & search query
+			const catFilter = (catFilterSelect?.value || 'all').toLowerCase();
+			const searchQuery = (document.getElementById('menu-config-search')?.value || '').toLowerCase().trim();
+
+			const filtered = sortedItems.filter(item => {
+				const matchesCat = catFilter === 'all' || (item.category || '').toLowerCase() === catFilter;
+				const matchesSearch = !searchQuery || 
+					(item.name || '').toLowerCase().includes(searchQuery) ||
+					(item.description || '').toLowerCase().includes(searchQuery) ||
+					(item.category || '').toLowerCase().includes(searchQuery);
+				return matchesCat && matchesSearch;
+			});
+
+			if (filtered.length === 0) {
+				tbody.innerHTML = `<tr><td colspan="12" style="text-align: center; color: var(--muted); padding: 30px; font-size: 14px;">No se encontraron productos en la categoría o búsqueda seleccionada.</td></tr>`;
+				return;
+			}
+
+			tbody.innerHTML = filtered.map(item => {
 				const cost = item.cost || 0;
 				const productionCost = item.productionCost || 0;
 				const boxCost = item.boxCost || 0;
@@ -2634,12 +2694,12 @@
 					<tr>
 						<td>
 							<div style="display: flex; align-items: center; gap: 10px;">
-								${item.image ? `<img src="${item.image}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;">` : ''}
+								${item.image ? `<img src="${item.image}" style="width: 45px; height: 45px; object-fit: cover; border-radius: 8px;">` : ''}
 								<strong>${item.name}</strong>
 							</div>
 						</td>
-						<td style="max-width: 200px; color: var(--muted); font-size: 13px;">${item.description || '-'}</td>
-						<td><span class="badge badge-info">${item.category}</span></td>
+						<td style="max-width: 220px; color: var(--muted); font-size: 13px;">${item.description || '-'}</td>
+						<td><span class="badge badge-info" style="font-weight: 600;">${item.category}</span></td>
 						<td>${Utils.formatCurrency(cost)}</td>
 						<td style="color: #ff9800;">${Utils.formatCurrency(productionCost)}</td>
 						<td style="color: #00bcd4;">${Utils.formatCurrency(boxCost)}</td>
@@ -2931,12 +2991,22 @@
 		// MODAL DE PEDIDOS
 		let currentOrderTable = null;
 		let currentOrderItems = [];
+		let currentOrderModalCategory = 'all';
+
+		function setOrderModalCategory(cat) {
+			currentOrderModalCategory = cat;
+			renderOrderModalMenu();
+		}
 
 		function openOrderModal(tableId) {
 			const table = AppState.tables.find(t => t.id === tableId);
 			if (!table) return;
 
 			currentOrderTable = table;
+			currentOrderModalCategory = 'all';
+
+			const searchInput = document.getElementById('order-menu-search');
+			if (searchInput) searchInput.value = '';
 
 			// Si la mesa ya tiene un pedido, cargar sus items
 			if (table.currentOrder) {
@@ -2961,29 +3031,82 @@
 		}
 
 		function renderOrderModalMenu() {
-			const categories = [...new Set(AppState.menuItems.filter(i => i.available).map(i => i.category))];
-			categories.sort((a, b) => {
-				if (a.toLowerCase() === 'hamburguesas') return -1;
-				if (b.toLowerCase() === 'hamburguesas') return 1;
-				return a.localeCompare(b);
-			});
-			const container = document.getElementById('order-menu-items');
+			const availableItems = AppState.menuItems.filter(i => i.available);
+			const categories = Utils.sortCategories([...new Set(availableItems.map(i => i.category).filter(Boolean))]);
 
-			container.innerHTML = categories.map(category => `
-				<div style="margin-bottom: 25px;">
-					<h4 style="color: var(--accent); margin-bottom: 15px; border-bottom: 2px solid var(--accent); padding-bottom: 8px;">${category}</h4>
-					<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">
-						${AppState.menuItems
-					.filter(item => item.category === category && item.available)
-					.map(item => `
-								<div class="menu-item-btn" onclick="addItemToOrder('${item.id}')" style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; cursor: pointer; transition: all 0.3s; border: 2px solid transparent;" onmouseover="this.style.borderColor='var(--accent)'; this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.borderColor='transparent'; this.style.background='rgba(255,255,255,0.05)'">
-									<div style="font-weight: 600; margin-bottom: 5px;">${item.name}</div>
-									<div style="color: var(--accent); font-size: 18px; font-weight: 700;">${Utils.formatCurrency(item.price)}</div>
-								</div>
-							`).join('')}
-					</div>
-				</div>
-			`).join('');
+			// Render category filter buttons
+			const filterContainer = document.getElementById('order-category-filters');
+			if (filterContainer) {
+				filterContainer.innerHTML = `
+					<button onclick="setOrderModalCategory('all')" class="btn btn-small" 
+						style="background: ${currentOrderModalCategory === 'all' ? 'var(--accent)' : 'rgba(255,255,255,0.08)'}; color: ${currentOrderModalCategory === 'all' ? '#000' : '#fff'}; border: 1px solid ${currentOrderModalCategory === 'all' ? 'var(--accent)' : 'rgba(255,255,255,0.15)'}; border-radius: 20px; padding: 5px 14px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+						Todos (${availableItems.length})
+					</button>
+					${categories.map(cat => {
+						const count = availableItems.filter(i => i.category === cat).length;
+						const isActive = currentOrderModalCategory === cat;
+						return `
+							<button onclick="setOrderModalCategory('${cat.replace(/'/g, "\\'")}')" class="btn btn-small" 
+								style="background: ${isActive ? 'var(--accent)' : 'rgba(255,255,255,0.08)'}; color: ${isActive ? '#000' : '#fff'}; border: 1px solid ${isActive ? 'var(--accent)' : 'rgba(255,255,255,0.15)'}; border-radius: 20px; padding: 5px 14px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+								${cat} (${count})
+							</button>
+						`;
+					}).join('')}
+				`;
+			}
+
+			const searchQuery = (document.getElementById('order-menu-search')?.value || '').toLowerCase().trim();
+
+			let displayCategories = categories;
+			if (currentOrderModalCategory !== 'all') {
+				displayCategories = categories.filter(c => c === currentOrderModalCategory);
+			}
+
+			const container = document.getElementById('order-menu-items');
+			if (!container) return;
+
+			let html = '';
+
+			displayCategories.forEach(category => {
+				let items = availableItems.filter(item => item.category === category);
+				if (searchQuery) {
+					items = items.filter(item => 
+						(item.name || '').toLowerCase().includes(searchQuery) ||
+						(item.description || '').toLowerCase().includes(searchQuery)
+					);
+				}
+
+				if (items.length > 0) {
+					html += `
+						<div style="margin-bottom: 25px;">
+							<h4 style="color: var(--accent); margin-bottom: 12px; border-bottom: 2px solid var(--accent); padding-bottom: 6px; font-size: 16px; font-weight: 700; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: space-between;">
+								<span>🍽️ ${category}</span>
+								<span style="font-size: 12px; color: var(--muted); font-weight: normal;">${items.length} opción(es)</span>
+							</h4>
+							<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;">
+								${items.map(item => `
+									<div class="menu-item-btn" onclick="addItemToOrder('${item.id}')" 
+										style="background: rgba(255,255,255,0.04); padding: 14px; border-radius: 10px; cursor: pointer; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; justify-content: space-between;" 
+										onmouseover="this.style.borderColor='var(--accent)'; this.style.background='rgba(255,255,255,0.12)'; this.style.transform='translateY(-2px)'" 
+										onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'; this.style.background='rgba(255,255,255,0.04)'; this.style.transform='none'">
+										<div>
+											<div style="font-weight: 700; margin-bottom: 4px; font-size: 15px; color: #ffffff;">${item.name}</div>
+											${item.description ? `<div style="font-size: 12px; color: var(--muted); margin-bottom: 10px; line-height: 1.3; max-height: 36px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${item.description}</div>` : ''}
+										</div>
+										<div style="color: var(--accent); font-size: 17px; font-weight: 700; margin-top: 6px;">${Utils.formatCurrency(item.price)}</div>
+									</div>
+								`).join('')}
+							</div>
+						</div>
+					`;
+				}
+			});
+
+			if (!html) {
+				html = `<div style="text-align: center; color: var(--muted); padding: 40px; background: rgba(255,255,255,0.02); border-radius: 10px;">No se encontraron platillos disponibles.</div>`;
+			}
+
+			container.innerHTML = html;
 		}
 
 		function addItemToOrder(itemId) {

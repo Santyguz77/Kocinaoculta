@@ -202,12 +202,7 @@
 		}
 
 		function renderCategoryButtons() {
-			const categories = [...new Set(allMenuItems.map(item => item.category))];
-			categories.sort((a, b) => {
-				if (a.toLowerCase() === 'hamburguesas') return -1;
-				if (b.toLowerCase() === 'hamburguesas') return 1;
-				return a.localeCompare(b);
-			});
+			const categories = Utils.sortCategories([...new Set(allMenuItems.map(item => item.category).filter(Boolean))]);
 			const container = document.querySelector('.category-filter');
 
 			container.innerHTML = `
@@ -258,7 +253,9 @@
 				return;
 			}
 
-			container.innerHTML = Object.keys(itemsByCategory).map(category => `
+			const sortedCatKeys = Utils.sortCategories(Object.keys(itemsByCategory));
+
+			container.innerHTML = sortedCatKeys.map(category => `
 				<div class="category-section">
 					<h2 class="category-title">${category}</h2>
 					<div>
